@@ -26,7 +26,7 @@ html,body{height:100%;margin:0}
 body{
   font:14px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg);
   display:grid;overflow:hidden;
-  grid-template-rows:52px 46px 1fr 34px;
+  grid-template-rows:52px auto 1fr 34px;
   grid-template-columns:54px 1fr 290px;
   grid-template-areas:"hdr hdr hdr" "tools props side" "tools view side" "tools status side";
 }
@@ -37,7 +37,7 @@ button{cursor:pointer}
 [hidden]{display:none!important}
 
 /* Header */
-#hdr{grid-area:hdr;overflow-x:auto;background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;min-width:0}
+#hdr{grid-area:hdr;overflow-x:auto;overflow-y:hidden;background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;min-width:0}
 .brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
 .brand img{height:30px;background:#fff;border-radius:4px;padding:2px 6px}
 .wordmark{font-size:19px;letter-spacing:.2px}
@@ -71,7 +71,7 @@ button{cursor:pointer}
 svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
 /* Props bar */
-#props{grid-area:props;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 12px;overflow-x:auto;white-space:nowrap}
+#props{grid-area:props;background:var(--panel);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:7px 12px;min-height:46px;white-space:nowrap;min-width:0}
 #propTitle{font-weight:600;color:var(--heading);min-width:110px}
 .prop{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .prop input[type=range]{width:80px}
@@ -79,7 +79,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 .swatches{display:flex;gap:4px}
 .sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px #b8c0cc;padding:0}
 .sw.on{box-shadow:0 0 0 2px var(--navy)}
-#pColor{width:28px;height:26px;border:1px solid var(--border);border-radius:6px;padding:1px;background:var(--field)}
+#pColor,#pFillColor{width:28px;height:26px;border:1px solid var(--border);border-radius:6px;padding:1px;background:var(--field)}
 .pbtn{border:1px solid var(--border);background:var(--field);border-radius:6px;padding:4px 10px;color:var(--text)}
 .pbtn:hover{background:var(--bg)}
 .pbtn.danger{color:var(--danger);border-color:var(--danger-line)}
@@ -147,7 +147,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(15,25,45,.5);display:grid;place-items:center;z-index:100;padding:16px}
-.modal{background:var(--panel);border-radius:12px;width:100%;max-width:460px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal{background:var(--panel);border-radius:12px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
 .modal h2{margin:0;padding:16px 20px;border-bottom:1px solid var(--border);font-size:17px;color:var(--heading)}
 .modal .body{padding:16px 20px}
 .modal .foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
@@ -160,7 +160,26 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 .legend-row .dot{width:16px;height:16px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.2)}
 .legend-row input{flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 7px}
 
-#toast{position:fixed;left:50%;bottom:48px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:200;max-width:90vw;font-size:14px}
+#toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:200;max-width:min(560px,92vw);font-size:15px;border-left:6px solid var(--accent)}
+#toast.ok{border-left-color:#43a047}
+#toast.err{border-left-color:#e53935}
+#saveState{font-size:12px;padding:3px 9px;border-radius:999px;white-space:nowrap;font-weight:700;letter-spacing:.2px}
+#saveState.dirty{background:#f5a524;color:#231600}
+#saveState.saved{background:#2e7d32;color:#fff}
+.save-file{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--muted);word-break:break-all}
+.save-file b{color:var(--text)}
+.save-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
+.save-opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--border);background:var(--field);border-radius:10px;padding:12px 14px;color:var(--text)}
+.save-opt:hover,.save-opt:focus-visible{border-color:var(--accent);background:var(--accent-soft);outline:none}
+.save-opt b{font-size:15px}
+.save-opt small{color:var(--muted);font-size:12.5px}
+.save-opt.primary{grid-column:1/-1;background:var(--navy);border-color:var(--navy);color:#fff}
+.save-opt.primary small{color:#c9d6ea}
+.save-opt.primary:hover,.save-opt.primary:focus-visible{background:var(--navy-2)}
+@media (max-width:480px){.save-grid{grid-template-columns:1fr}}
+@media (max-width:1180px){ .hbtn:not(.keep-lbl) .lbl{display:none} }
+@media (max-width:900px){ .wordmark span{display:none} #hdr{gap:7px} }
+@media (max-width:560px){ #btnRedo{display:none} #hdr{gap:5px;padding:0 8px} }
 
 @media (max-height:900px) and (min-width:561px){
   body{grid-template-columns:88px 1fr 290px} body.no-side{grid-template-columns:88px 1fr 0}
@@ -170,6 +189,8 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 }
 @media (max-width:900px){
   body{grid-template-columns:48px 1fr 0}
+  #tools{display:flex}
+  .tool-sep{width:30px;margin:4px 0}
   body.show-side{grid-template-columns:48px 1fr 270px}
   #sidebar{display:none}
   body.show-side #sidebar{display:flex}
@@ -188,14 +209,15 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
     <div class="app-tag">Markup</div>
   </div>
   <input id="docName" placeholder="Document name" title="Rename – used for saved and exported file names" disabled>
+  <span id="saveState" hidden></span>
   <span class="hdr-date" id="hdrDate"></span>
   <div class="spacer"></div>
   <button class="hbtn" id="btnOpen" title="Open PDF, JPEG, PNG or saved markup (Ctrl+O)"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span class="lbl">Open</span></button>
   <button class="hbtn" id="btnUndo" title="Undo (Ctrl+Z)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
   <button class="hbtn" id="btnRedo" title="Redo (Ctrl+Y)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
-  <button class="hbtn" id="btnSave" title="Save markup project – reopen and keep editing later (Ctrl+S)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/></svg><span class="lbl">Save</span></button>
+  <button class="hbtn primary keep-lbl" id="btnSave" title="Save or export your marked-up document" disabled><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/></svg><span class="lbl">Save</span></button>
   <div class="menu-wrap">
-    <button class="hbtn primary" id="btnExport" title="Export" disabled><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><span class="lbl">Export</span></button>
+    <button class="hbtn" id="btnExport" title="Export" disabled><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><span class="lbl">Export</span></button>
     <div class="menu" id="exportMenu" hidden>
       <button data-exp="pdf">PDF<small>All pages, markups flattened in</small></button>
       <button data-exp="png">PNG image<small>Current page, full quality</small></button>
@@ -213,15 +235,20 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 
 <div id="props">
   <span id="propTitle">Select</span>
-  <div class="prop" data-p="color"><div class="swatches" id="swatches"></div><input type="color" id="pColor" title="Custom colour"></div>
+  <div class="prop" data-p="color">Outline <div class="swatches" id="swatches"></div><input type="color" id="pColor" title="Custom colour"></div>
   <label class="prop" data-p="lw">Line <input type="range" id="pLw" min="1" max="24" step="1"></label>
   <label class="prop" data-p="dash">Style <select id="pDash"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
-  <label class="prop" data-p="fill">Fill <select id="pFill"><option value="none">None</option><option value="tint">Tint</option><option value="solid">Solid</option><option value="white">White</option></select></label>
+  <div class="prop" data-p="fill">Fill <input type="color" id="pFillColor" title="Fill colour"><select id="pFill" title="Fill strength"><option value="none">No fill</option><option value="tint">Light</option><option value="half">Medium</option><option value="solid">Solid</option></select></div>
+  <label class="prop" data-p="shape">Shape <select id="pShape"><option value="box">Box</option><option value="ellipse">Ellipse / circle</option></select></label>
   <label class="prop" data-p="tfill">Background <select id="pTFill"><option value="none">None</option><option value="white">White</option><option value="box">White + border</option></select></label>
   <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="4" max="60" step="1"></label>
   <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
   <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
+  <span class="prop" data-p="rot">Rotate
+    <button class="pbtn" data-rot="-90" title="Rotate 90° anticlockwise">⟲ 90°</button><button class="pbtn" data-rot="-15" title="Rotate 15° anticlockwise ( [ )">⟲ 15°</button><button class="pbtn" data-rot="15" title="Rotate 15° clockwise ( ] )">⟳ 15°</button><button class="pbtn" data-rot="90" title="Rotate 90° clockwise">⟳ 90°</button>
+    <span id="pAngleWrap"><input type="number" id="pAngle" step="1" min="-180" max="180" title="Angle in degrees" style="width:62px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--field);color:var(--text)">°</span>
+  </span>
   <span id="propHint"></span>
   <div class="spacer"></div>
   <span class="prop" data-p="selActions">
@@ -366,20 +393,20 @@ const IC = {
 };
 const TOOLS = [
   ['select','V','Select / move'],['pan','H','Pan (or hold Space)'],null,
-  ['line','L','Line'],['arrow','A','Arrow'],['rect','R','Rectangle'],['ellipse','E','Ellipse / circle'],['polygon','P','Polygon'],['pen','F','Freehand'],['cloud','C','Revision cloud'],null,
+  ['line','L','Line'],['arrow','A','Arrow'],['rect','R','Rectangle'],['ellipse','E','Ellipse / circle'],['polygon','P','Polygon'],['pen','F','Freehand'],['cloud','C','Cloud markup (box or ellipse + note)'],null,
   ['text','T','Text'],['callout','O','Callout (arrow + note)'],['stamp','S','Stamp'],['image','I','Image / signature (or paste)'],['legend','K','Colour key'],null,
   ['marker','Y','Highlighter'],['hlbox','B','Highlight box'],null,
   ['whiteout','W','White-out (cover)'],['movearea','X','Move part of drawing'],null,
   ['calibrate','','Set scale from a known dimension'],['measure','M','Measure length'],['run','N','Measure run (multi-point)'],['area','U','Measure area'],
 ];
-const TYPE_NAME = {line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Revision cloud',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
+const TYPE_NAME = {line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
 const HINTS = {
   select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
   pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
   line:'Drag to draw. Hold Shift for 0° / 45° / 90°.', arrow:'Drag from tail to tip. Hold Shift for 0° / 45° / 90°.',
   rect:'Drag to draw. Hold Shift for a square.', ellipse:'Drag to draw. Hold Shift for a circle.',
   polygon:'Click to add corners. Double-click, Enter, or click the first point to finish.',
-  pen:'Drag to draw freehand.', cloud:'Drag a box around the change. Set the revision letter in “Rev tag”.',
+  pen:'Drag to draw freehand.', cloud:'Drag around the area. Pick Box or Ellipse and a fill above; Shift = square/circle. Then type a note (Esc to skip).',
   text:'Click to place text. Ctrl+Enter or click away to finish.', callout:'Drag from the item you are pointing at to where the note should go.',
   stamp:'Pick a stamp above, then click to place it. Drag a corner handle to resize.',
   image:'Choose an image or signature to insert. You can also paste an image with Ctrl+V.',
@@ -395,7 +422,7 @@ const HINTS = {
 const PROPS = {
   line:['color','lw','dash','opacity'], arrow:['color','lw','dash','opacity'], pen:['color','lw','opacity'],
   rect:['color','lw','dash','fill','opacity'], ellipse:['color','lw','dash','fill','opacity'], polygon:['color','lw','dash','fill','opacity'],
-  cloud:['color','lw','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
+  cloud:['color','lw','fill','shape','fs','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
   image:['opacity'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
   patch:[], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
 };
@@ -407,7 +434,7 @@ const DEF_STYLES = {
   line:{color:'#e53935',lw:3,dash:'solid',opacity:1}, arrow:{color:'#e53935',lw:3,dash:'solid',opacity:1},
   rect:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1}, ellipse:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1},
   polygon:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1}, pen:{color:'#e53935',lw:3,opacity:1},
-  cloud:{color:'#e53935',lw:3,rev:''}, text:{color:'#1565c0',fs:12,tfill:'none'}, callout:{color:'#1565c0',lw:2,fs:11},
+  cloud:{color:'#e53935',lw:3,rev:'',fill:'none',fillColor:'#ffeb3b',shape:'box',fs:11}, text:{color:'#1565c0',fs:12,tfill:'none'}, callout:{color:'#1565c0',lw:2,fs:11},
   stamp:{color:STAMPS['APPROVED'],stamp:'APPROVED',opacity:0.9}, image:{opacity:1}, legend:{fs:10},
   marker:{color:'#ffeb3b',lw:14,opacity:0.4}, hlbox:{color:'#ffeb3b',opacity:0.35}, whiteout:{color:'#ffffff'}, patch:{},
   measure:{color:'#6a1b9a',lw:2,fs:10}, run:{color:'#6a1b9a',lw:2,fs:10}, area:{color:'#6a1b9a',lw:2,fs:10,fill:'tint'},
@@ -466,7 +493,7 @@ function annValue(a, page){
   if (a.type === 'measure') return fmtLen(dist(a.pts[0], a.pts[1]), page);
   if (a.type === 'run') return fmtLen(polyLen(a.pts), page);
   if (a.type === 'area') return `${fmtArea(polyArea(a.pts), page)} · P ${fmtLen(polyLen(a.pts, true), page)}`;
-  if (a.type === 'text' || a.type === 'callout') return (a.text || '').replace(/\s+/g,' ');
+  if (a.type === 'text' || a.type === 'callout' || a.type === 'cloud') return (a.text || '').replace(/\s+/g,' ');
   if (a.type === 'stamp') return a.stamp;
   return '';
 }
@@ -481,9 +508,10 @@ function setStroke(c, st, u){
 }
 function fillOf(st){
   if (!st.fill || st.fill === 'none') return null;
-  if (st.fill === 'tint') return hexA(st.color, 0.18);
   if (st.fill === 'white') return '#ffffff';
-  return st.color;
+  const col = st.fillColor || st.color;
+  if (!/^#/.test(col)) return col;
+  return hexA(col, st.fill === 'tint' ? 0.2 : st.fill === 'half' ? 0.5 : 1);
 }
 function arrowHead(c, from, to, size, color){
   const a = Math.atan2(to[1]-from[1], to[0]-from[0]);
@@ -505,17 +533,32 @@ function label(c, lines, cx, cy, fontPx, color){
   c.fillStyle = color; lines.forEach((l,i) => c.fillText(l, cx, cy - h/2 + lh*(i+0.5)));
   c.restore(); return b;
 }
-function cloudPath(c, x, y, w, h, d){
-  const corners = [[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
-  c.beginPath();
-  for (let i = 0; i < 4; i++){
-    const a = corners[i], b = corners[(i+1)%4], L = dist(a,b), n = Math.max(1, Math.round(L/d));
+function cloudShapePath(c, shape, x, y, w, h, d){
+  let pts = [];
+  if (shape === 'ellipse'){
+    const N = 120, poly = [];
+    for (let k = 0; k < N; k++){ const t = k/N*Math.PI*2; poly.push([x+w/2+w/2*Math.cos(t), y+h/2+h/2*Math.sin(t)]); }
+    const segL = poly.map((p, i) => dist(p, poly[(i+1)%N])), L = segL.reduce((a, b) => a+b, 0);
+    const n = Math.max(8, Math.round(L/d)), step = L/n;
+    let si = 0, acc = 0;
     for (let k = 0; k < n; k++){
-      const p = [a[0]+(b[0]-a[0])*k/n, a[1]+(b[1]-a[1])*k/n], q = [a[0]+(b[0]-a[0])*(k+1)/n, a[1]+(b[1]-a[1])*(k+1)/n];
-      const m = [(p[0]+q[0])/2, (p[1]+q[1])/2], r = dist(p,q)/2;
-      if (r < 1e-6) continue;
-      c.arc(m[0], m[1], r, Math.atan2(p[1]-m[1], p[0]-m[0]), Math.atan2(q[1]-m[1], q[0]-m[0]), false);
+      const target = k*step;
+      while (si < N-1 && acc + segL[si] < target){ acc += segL[si]; si++; }
+      const f = segL[si] ? (target-acc)/segL[si] : 0, a = poly[si], b = poly[(si+1)%N];
+      pts.push([a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f]);
     }
+  } else {
+    const corners = [[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+    for (let i = 0; i < 4; i++){
+      const a = corners[i], b = corners[(i+1)%4], n = Math.max(1, Math.round(dist(a,b)/d));
+      for (let k = 0; k < n; k++) pts.push([a[0]+(b[0]-a[0])*k/n, a[1]+(b[1]-a[1])*k/n]);
+    }
+  }
+  c.beginPath();
+  for (let i = 0; i < pts.length; i++){
+    const p = pts[i], q = pts[(i+1)%pts.length], m = [(p[0]+q[0])/2, (p[1]+q[1])/2], r = dist(p,q)/2;
+    if (r < 1e-6) continue;
+    c.arc(m[0], m[1], r, Math.atan2(p[1]-m[1], p[0]-m[0]), Math.atan2(q[1]-m[1], q[0]-m[0]), false);
   }
   c.closePath();
 }
@@ -532,8 +575,44 @@ function textBlock(c, a, x, y, fontPx, opts){
   return b;
 }
 
+/* ---------- Rotation ---------- */
+const ROT_TYPES = new Set(['rect','ellipse','cloud','hlbox','whiteout','image','stamp','text','patch','legend']);
+const NO_ROTATE = new Set(['callout']);
+const normAng = r => { r = ((r + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI; return Math.abs(r) < 1e-9 ? 0 : r; };
+function rotAround(p, c, ang){ const s = Math.sin(ang), co = Math.cos(ang), dx = p[0]-c[0], dy = p[1]-c[1]; return [c[0]+dx*co-dy*s, c[1]+dx*s+dy*co]; }
+function rotCenter(a){ if (a.type === 'text' || a.type === 'legend') return a.pts[0]; const [x,y,w,h] = box(a.pts); return [x+w/2, y+h/2]; }
+const isRot = a => !!a.rot && ROT_TYPES.has(a.type);
+const toLocal = (a, p) => isRot(a) ? rotAround(p, rotCenter(a), -a.rot) : p;
+const toWorld = (a, p) => isRot(a) ? rotAround(p, rotCenter(a), a.rot) : p;
+function applyRot(c, a){ if (isRot(a)){ const [cx,cy] = rotCenter(a); c.translate(cx, cy); c.rotate(a.rot); c.translate(-cx, -cy); } }
+
 /* ---------- Annotation renderer (shared by screen + export) ---------- */
 function drawAnn(c, a, page){
+  if (a.type === 'patch'){ c.save(); c.fillStyle = '#fff'; c.fillRect(...a.src); c.restore(); }
+  c.save(); applyRot(c, a); drawAnnBody(c, a, page); c.restore();
+  if (a.type === 'cloud' && a.pts[2] && (a.text || a._editing)) drawCloudNote(c, a, page);
+}
+function drawCloudNote(c, a, page){
+  const u = unitOf(page), st = a.style, fp = (st.fs || 11)*u*1.6, N = a.pts[2];
+  c.save(); c.globalAlpha = 1;
+  c.font = `${fp}px ${FONT}`;
+  const lines = (a.text || ' ').split('\n'), pad = fp*0.3, lh = fp*1.25;
+  const w = Math.max(fp*0.6, ...lines.map(l => c.measureText(l).width)) + pad*2, h = lh*lines.length + pad*2;
+  const b = [N[0]-pad, N[1]-pad, w, h];
+  const [cx, cy] = rotCenter(a);
+  const near = [clamp(cx, b[0], b[0]+b[2]), clamp(cy, b[1], b[1]+b[3])];
+  const L = toLocal(a, near), bx = box(a.pts), dx = L[0]-cx, dy = L[1]-cy;
+  const s = st.shape === 'ellipse' ? 1/Math.hypot(dx/(bx[2]/2 || 1e-6), dy/(bx[3]/2 || 1e-6)) : Math.min(Math.abs((bx[2]/2)/(dx || 1e-9)), Math.abs((bx[3]/2)/(dy || 1e-9)));
+  if (s < 1){
+    const e = toWorld(a, [cx+dx*s, cy+dy*s]);
+    c.strokeStyle = c.fillStyle = st.color; c.lineWidth = Math.max(st.lw*u*0.7, u); c.lineCap = 'round';
+    pathPts(c, [e, near]); c.stroke();
+    c.beginPath(); c.arc(e[0], e[1], Math.max(st.lw*u*1.3, u*2.5), 0, Math.PI*2); c.fill();
+  }
+  a._nb = textBlock(c, a, N[0], N[1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.7, u*0.8)});
+  c.restore();
+}
+function drawAnnBody(c, a, page){
   const u = unitOf(page), st = a.style, P = a.pts;
   c.save();
   c.globalAlpha = st.opacity ?? 1; c.lineJoin = 'round'; c.lineCap = 'round';
@@ -558,9 +637,11 @@ function drawAnn(c, a, page){
     case 'cloud': {
       const [x,y,w,h] = box(P);
       setStroke(c, st, u); c.setLineDash([]);
-      cloudPath(c, x, y, w, h, Math.max(u*16, st.lw*u*6)); c.stroke();
+      cloudShapePath(c, st.shape, x, y, w, h, Math.max(u*16, st.lw*u*6));
+      const f = fillOf(st); if (f){ c.fillStyle = f; c.fill(); }
+      c.stroke();
       if (st.rev){
-        const fp = 11*u*1.6, s = fp*1.9, cx = x+w, cy = y;
+        const el = st.shape === 'ellipse', fp = 11*u*1.6, s = fp*1.9, cx = el ? x+w*0.85 : x+w, cy = el ? y+h*0.15 : y;
         c.beginPath(); c.moveTo(cx, cy - s*0.62); c.lineTo(cx + s*0.58, cy + s*0.38); c.lineTo(cx - s*0.58, cy + s*0.38); c.closePath();
         c.fillStyle = '#fff'; c.fill(); c.lineWidth = Math.max(st.lw*u*0.8, u); c.stroke();
         c.fillStyle = st.color; c.font = `bold ${fp}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -601,7 +682,6 @@ function drawAnn(c, a, page){
       break; }
     case 'image': { const im = S.imgCache[a.asset]; const b = box(P); if (im && im.complete) c.drawImage(im, ...b); else { c.strokeStyle = '#999'; c.strokeRect(...b); } break; }
     case 'patch': {
-      const [sx,sy,sw,sh] = a.src; c.fillStyle = '#fff'; c.fillRect(sx,sy,sw,sh);
       const im = S.imgCache[a.asset]; if (im && im.complete) c.drawImage(im, ...box(P));
       break; }
     case 'legend': {
@@ -670,6 +750,7 @@ function drawFooter(c, page){
 }
 
 function annBBox(a){
+  if (a.type === 'cloud') return box(a.pts);
   if (a._b && ['text','callout','legend','stamp'].includes(a.type)){
     if (a.type === 'callout'){ const b = a._b; const xs = [b[0], b[0]+b[2], a.pts[0][0]], ys = [b[1], b[1]+b[3], a.pts[0][1]]; return [Math.min(...xs), Math.min(...ys), Math.max(...xs)-Math.min(...xs), Math.max(...ys)-Math.min(...ys)]; }
     return a._b;
@@ -678,20 +759,33 @@ function annBBox(a){
   const x0 = Math.min(...xs), y0 = Math.min(...ys);
   return [x0, y0, Math.max(...xs)-x0, Math.max(...ys)-y0];
 }
+function ellipseHit(p, b, tol, filled){
+  const [x,y,w,h] = b, rx = w/2, ry = h/2; if (rx < 1e-6 || ry < 1e-6) return false;
+  const k = Math.hypot((p[0]-x-rx)/rx, (p[1]-y-ry)/ry); if (filled && k <= 1) return true;
+  return Math.abs(k-1)*Math.min(rx, ry) <= tol;
+}
 function hitAnn(a, p, tol){
   const u = unitOf(cur()), lw = ((a.style && a.style.lw) || 2) * u / 2;
+  if (a.type === 'cloud' && a.pts[2] && a.text && a._nb && inBox(p, a._nb, tol)) return true;
+  p = toLocal(a, p);
   switch (a.type){
     case 'line': case 'arrow': case 'measure': return segDist(p, a.pts[0], a.pts[1]) <= tol + lw;
     case 'pen': case 'run': return polyDist(p, a.pts) <= tol + lw;
     case 'marker': return polyDist(p, a.pts) <= tol + lw*1.5;
     case 'polygon': case 'area': return (fillOf(a.style) && inPoly(p, a.pts)) || polyDist(p, a.pts, true) <= tol + lw;
-    case 'rect': case 'cloud': { const b = box(a.pts); if (a.type === 'rect' && fillOf(a.style)) return inBox(p, b, tol); return polyDist(p, boxPts(b), true) <= tol + lw + (a.type === 'cloud' ? u*8 : 0); }
+    case 'rect': { const b = box(a.pts); if (fillOf(a.style)) return inBox(p, b, tol); return polyDist(p, boxPts(b), true) <= tol + lw; }
+    case 'cloud': { const b = box(a.pts), f = !!fillOf(a.style); if (a.style.shape === 'ellipse') return ellipseHit(p, b, tol + lw + u*8, f); if (f && inBox(p, b, tol)) return true; return polyDist(p, boxPts(b), true) <= tol + lw + u*8; }
     case 'ellipse': { const [x,y,w,h] = box(a.pts); const rx = w/2, ry = h/2; if (rx < 1e-6 || ry < 1e-6) return false; const k = Math.hypot((p[0]-x-rx)/rx, (p[1]-y-ry)/ry); if (fillOf(a.style) && k <= 1) return true; return Math.abs(k-1)*Math.min(rx,ry) <= tol + lw; }
     case 'callout': return (a._b && inBox(p, a._b, tol)) || segDist(p, a.pts[0], a.pts[1]) <= tol*0.5 + lw || dist(p, a.pts[0]) <= tol*1.5;
     default: return inBox(p, annBBox(a), tol);
   }
 }
 const editablePts = a => ['pen','marker','text','legend'].includes(a.type) ? [] : a.pts;
+const handlePts = a => editablePts(a).map((q, i) => (a.type === 'cloud' && i === 2) ? q : toWorld(a, q));
+function rotHandle(a){
+  const b = annBBox(a), z = S.zoom, base = [b[0]+b[2]/2, b[1]-4/z], tip = [base[0], base[1]-24/z];
+  return {base: toWorld(a, base), p: toWorld(a, tip)};
+}
 
 /* ---------- Background rendering ---------- */
 let bgTimer = null, bgToken = 0;
@@ -753,10 +847,18 @@ function draw(){
   if (sel){
     const b = annBBox(sel), pad = 4/z;
     ctx.save(); ctx.strokeStyle = '#0096d6'; ctx.lineWidth = 1.5/z; ctx.setLineDash([5/z, 4/z]);
-    ctx.strokeRect(b[0]-pad, b[1]-pad, b[2]+pad*2, b[3]+pad*2);
-    if (sel.type === 'patch'){ ctx.strokeStyle = '#c62828'; ctx.strokeRect(...sel.src); }
+    ctx.save(); applyRot(ctx, sel); ctx.strokeRect(b[0]-pad, b[1]-pad, b[2]+pad*2, b[3]+pad*2); ctx.restore();
+    if (sel.type === 'patch'){ ctx.strokeStyle = '#c62828'; ctx.strokeRect(...sel.src); ctx.strokeStyle = '#0096d6'; }
+    if (sel.type === 'cloud' && sel.pts[2] && sel.text && sel._nb){ const nb = sel._nb; ctx.strokeRect(nb[0]-pad, nb[1]-pad, nb[2]+pad*2, nb[3]+pad*2); }
     ctx.setLineDash([]); const hs = 9/z;
-    for (const p of editablePts(sel)){ ctx.fillStyle = '#fff'; ctx.fillRect(p[0]-hs/2, p[1]-hs/2, hs, hs); ctx.strokeRect(p[0]-hs/2, p[1]-hs/2, hs, hs); }
+    if (!NO_ROTATE.has(sel.type)){
+      const rh = rotHandle(sel);
+      pathPts(ctx, [rh.base, rh.p]); ctx.stroke();
+      ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], 6/z, 0, Math.PI*2); ctx.fillStyle = '#0096d6'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5/z; ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], 3/z, -2.2, 1.6); ctx.stroke();
+      ctx.strokeStyle = '#0096d6';
+    }
+    for (const p of handlePts(sel)){ ctx.fillStyle = '#fff'; ctx.fillRect(p[0]-hs/2, p[1]-hs/2, hs, hs); ctx.strokeRect(p[0]-hs/2, p[1]-hs/2, hs, hs); }
     ctx.restore();
   }
   if (S.snap){ const s = 10/z; ctx.save(); ctx.strokeStyle = '#00c853'; ctx.lineWidth = 2/z; ctx.strokeRect(S.snap[0]-s/2, S.snap[1]-s/2, s, s); ctx.restore(); }
@@ -789,7 +891,7 @@ function updateUndoBtns(){ $('#btnUndo').disabled = !S.undo.length; $('#btnRedo'
 
 let listTimer = null;
 function markDirty(){
-  S.dirty = true; scheduleAutosave(); render(); updateUndoBtns();
+  setDirty(true); scheduleAutosave(); render(); updateUndoBtns();
   clearTimeout(listTimer); listTimer = setTimeout(() => { renderMarkupList(); updateThumbCounts(); }, 120);
 }
 
@@ -829,6 +931,7 @@ async function loadDoc(src, saved){
       (saved.pages || []).forEach((sp, i) => { const p = doc.pages[i]; if (!p) return; p.rot = sp.rot || 0; p.mm = sp.mm || null; p.scaleLabel = sp.scaleLabel || ''; p.anns = sp.anns || []; });
     }
     S.doc = doc; S.cur = 0; S.sel = null; S.undo = []; S.redo = []; S.dirty = !!saved && !!saved._autosave;
+    if (S.dirty) setDirty(true); else $('#saveState').hidden = true;
     Object.keys(doc.assets).forEach(cacheAsset);
     $('#welcome').hidden = true;
     ['#docName','#btnSave','#btnExport'].forEach(s => $(s).disabled = false);
@@ -870,7 +973,7 @@ async function saveBlob(blob, filename, desc, mime, ext, handleKey){
     catch (e) {
       if (e && e.code === 'declined') return null;
       if (e && e.code === 'rate_limited'){ toast('A save prompt is already open – finish that one first.'); return null; }
-      toast('Could not save the file here (' + ((e && e.code) || 'error') + ').'); return null;
+      toast('Could not save the file here (' + ((e && e.code) || 'error') + ').', 6000, 'err'); return null;
     }
   }
   if (window.showSaveFilePicker){
@@ -894,7 +997,7 @@ async function saveProject(saveAs){
   if (saveAs) S.fileHandle = null;
   const blob = new Blob([JSON.stringify(buildProject(false))], {type:'application/json'});
   const n = await saveBlob(blob, `${baseName()}.adimarkup.json`, 'ADI Markup project', 'application/json', '.json', 'fileHandle');
-  if (n){ S.dirty = false; toast(`Saved ${n}`); }
+  if (n){ setDirty(false); toast(`✓ Saved “${n}” to your Downloads folder. Reopen it with Open to keep editing.`, 7000, 'ok'); }
 }
 
 /* ---------- Autosave (IndexedDB, this browser only) ---------- */
@@ -932,9 +1035,9 @@ async function exportAs(kind){
     const multi = S.doc.pages.length > 1, fn = `${baseName()}${multi ? '_p' + (S.cur+1) : ''}`;
     const k = S.doc.type === 'pdf' ? 300/72 : 1;
     const cv = await compositeCanvas(S.cur, k);
-    if (kind === 'png'){ const n = await saveBlob(await canvasBlob(cv, 'image/png'), fn + '.png', 'PNG image', 'image/png', '.png'); if (n) toast(`Exported ${n}`); }
-    else { const n = await saveBlob(await canvasBlob(cv, 'image/jpeg', 0.92), fn + '.jpg', 'JPEG image', 'image/jpeg', '.jpg'); if (n) toast(`Exported ${n}`); }
-  } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e)); }
+    if (kind === 'png'){ const n = await saveBlob(await canvasBlob(cv, 'image/png'), fn + '.png', 'PNG image', 'image/png', '.png'); if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok'); }
+    else { const n = await saveBlob(await canvasBlob(cv, 'image/jpeg', 0.92), fn + '.jpg', 'JPEG image', 'image/jpeg', '.jpg'); if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok'); }
+  } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e), 6000, 'err'); }
   finally { hideBusy(); }
 }
 async function exportPDF(){
@@ -967,7 +1070,7 @@ async function exportPDF(){
   out.setTitle(d.name || 'Document'); out.setAuthor(['ADI Climate Systems', d.initials].filter(Boolean).join(' – ')); out.setCreator('ADI Markup'); out.setModificationDate(new Date());
   const bytes = await out.save();
   const n = await saveBlob(new Blob([bytes], {type:'application/pdf'}), `${baseName()}.pdf`, 'PDF document', 'application/pdf', '.pdf');
-  if (n) toast(`Exported ${n}`);
+  if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
 }
 async function exportCSV(){
   const d = S.doc, rows = [['Document','Date','Page','Markup','Colour','Colour meaning','Length (mm)','Area (m²)','Perimeter (mm)','Text / detail']];
@@ -983,7 +1086,7 @@ async function exportCSV(){
   }));
   const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }).join(',')).join('\r\n');
   const n = await saveBlob(new Blob([csv], {type:'text/csv'}), `${baseName()}_schedule.csv`, 'CSV spreadsheet', 'text/csv', '.csv');
-  if (n) toast(`Exported ${n}`);
+  if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
 }
 
 /* ---------- Pointer interaction ---------- */
@@ -1038,7 +1141,12 @@ function onDown(e){
   if (t === 'select'){
     const sel = getSel();
     if (sel){
-      const hp = editablePts(sel).findIndex(q => dist(p, q) <= tolPx()*1.4);
+      if (!NO_ROTATE.has(sel.type) && dist(p, rotHandle(sel).p) <= tolPx()*1.6){
+        const bb = annBBox(sel), center = ROT_TYPES.has(sel.type) ? rotCenter(sel) : [bb[0]+bb[2]/2, bb[1]+bb[3]/2];
+        S.drag = {mode:'rotate', a:sel, center, startAng: Math.atan2(p[1]-center[1], p[0]-center[0]), startRot: ROT_TYPES.has(sel.type) ? (sel.rot || 0) : 0, startPts: JSON.parse(JSON.stringify(sel.pts)), moved:false};
+        return;
+      }
+      const hp = handlePts(sel).findIndex(q => dist(p, q) <= tolPx()*1.4);
       if (hp >= 0){ S.drag = {mode:'handle', a:sel, i:hp, start:p, moved:false}; return; }
     }
     const hit = [...page.anns].reverse().find(a => hitAnn(a, p, tolPx()));
@@ -1104,9 +1212,25 @@ function onMove(e){
       dr.a.pts.forEach(q => { q[0] += dx; q[1] += dy; });
       dr.last = p; render(); return;
     }
+    if (dr.mode === 'rotate'){
+      if (!dr.moved){ checkpoint(); dr.moved = true; }
+      let total = dr.startRot + Math.atan2(p[1]-dr.center[1], p[0]-dr.center[0]) - dr.startAng;
+      if (e.shiftKey) total = Math.round(total/(Math.PI/12))*(Math.PI/12);
+      else { const deg = total*180/Math.PI, r90 = Math.round(deg/90)*90; if (Math.abs(deg - r90) < 2.5) total = r90*Math.PI/180; }
+      const a = dr.a;
+      if (ROT_TYPES.has(a.type)) a.rot = normAng(total);
+      else a.pts = dr.startPts.map(q => rotAround(q, dr.center, total - dr.startRot));
+      render(); syncAngle(); return;
+    }
     if (dr.mode === 'handle'){
       if (!dr.moved){ checkpoint(); dr.moved = true; }
       const a = dr.a;
+      if (isRot(a) && a.pts.length >= 2 && dr.i < 2){
+        const j = dr.i === 0 ? 1 : 0, Wj = dr.Wj || (dr.Wj = toWorld(a, a.pts[j]));
+        const c2 = [(Wj[0]+p[0])/2, (Wj[1]+p[1])/2], hv = rotAround([p[0]-c2[0], p[1]-c2[1]], [0,0], -a.rot);
+        a.pts[dr.i] = [c2[0]+hv[0], c2[1]+hv[1]]; a.pts[j] = [c2[0]-hv[0], c2[1]-hv[1]];
+        render(); return;
+      }
       p = snapPt(p, a);
       if (e.shiftKey && a.pts.length === 2 && ['line','arrow','measure','callout'].includes(a.type)) p = constrainAngle(a.pts[1-dr.i], p);
       a.pts[dr.i] = p; render(); return;
@@ -1132,7 +1256,7 @@ function onUp(e){
   if (S.pinch){ if (S.pointers.size < 2) S.pinch = null; return; }
   if (!S.doc) return;
   const dr = S.drag; S.drag = null; view.classList.remove('panning');
-  if (dr){ if ((dr.mode === 'move' || dr.mode === 'handle') && dr.moved){ S.snap = null; markDirty(); } return; }
+  if (dr){ if (['move','handle','rotate'].includes(dr.mode) && dr.moved){ S.snap = null; markDirty(); updateProps(); } return; }
   const d = S.drawing; if (!d) return;
   const page = cur();
   if (FREE_TOOLS.has(d.type)){
@@ -1149,6 +1273,11 @@ function onUp(e){
     checkpoint(); page.anns.push(d); S.sel = d.id; render(); editText(d, true); return;
   }
   if (tiny){ render(); return; }
+  if (t === 'cloud'){
+    const [x, y, w] = box(d.pts), u = unitOf(page);
+    d.pts.push([clamp(x + w + u*25, u*5, PW(page) - u*160), Math.max(u*5, y - u*40)]); d.text = '';
+    checkpoint(); page.anns.push(d); S.sel = d.id; render(); editText(d, true); return;
+  }
   if (t === 'calibrate'){ openScaleModal(dist(d.pts[0], d.pts[1])); render(); return; }
   if (t === 'movearea'){ createPatch(box(d.pts)); return; }
   checkpoint(); page.anns.push(d); markDirty(); render();
@@ -1168,8 +1297,11 @@ function onDbl(e){
   if (!S.doc) return;
   if (S.drawing && CLICK_TOOLS.has(S.drawing.type)){ finishClickShape(); return; }
   if (S.tool === 'select'){
-    const p = toPage(e), a = [...cur().anns].reverse().find(x => (x.type === 'text' || x.type === 'callout') && hitAnn(x, p, tolPx()));
-    if (a){ S.sel = a.id; editText(a, false); }
+    const p = toPage(e), a = [...cur().anns].reverse().find(x => ['text','callout','cloud'].includes(x.type) && hitAnn(x, p, tolPx()));
+    if (a){
+      if (a.type === 'cloud' && !a.pts[2]){ const [x, y, w] = box(a.pts), u = unitOf(cur()), tr = toWorld(a, [x+w, y]); a.pts[2] = [tr[0] + u*25, tr[1] - u*40]; }
+      S.sel = a.id; editText(a, false);
+    }
   }
 }
 function onWheel(e){
@@ -1204,9 +1336,10 @@ let editor = null;
 function editText(a, isNew){
   commitEditor();
   const page = cur(), u = unitOf(page), fp = a.style.fs*u*1.6;
-  const anchor = a.type === 'callout' ? a.pts[1] : a.pts[0];
+  const anchor = a.type === 'callout' ? a.pts[1] : a.type === 'cloud' ? a.pts[2] : a.pts[0];
   const ta = document.createElement('textarea');
   ta.className = 'text-editor'; ta.value = a.text || ''; ta.spellcheck = true;
+  if (a.type === 'cloud') ta.placeholder = 'Type a note… (Esc to skip)';
   const old = a.text || '';
   a._editing = true;
   const place = () => {
@@ -1215,7 +1348,7 @@ function editText(a, isNew){
     ta.style.height = 'auto'; ta.style.width = 'auto';
     ctx.font = `${fz}px ${FONT}`;
     const lines = ta.value.split('\n');
-    ta.style.width = Math.max(60, ...lines.map(l => ctx.measureText(l + 'MM').width)) + 'px';
+    ta.style.width = Math.max(a.type === 'cloud' && !ta.value ? 230 : 60, ...lines.map(l => ctx.measureText(l + 'MM').width)) + 'px';
     ta.style.height = (lines.length * fz * 1.25 + 6) + 'px';
   };
   ta.addEventListener('input', place);
@@ -1232,7 +1365,10 @@ function commitEditor(){
   const text = ta.value.replace(/\s+$/, '');
   ta.remove(); delete a._editing;
   const page = S.doc.pages.find(p => p.anns.includes(a));
-  if (!text){
+  if (!text && a.type === 'cloud'){
+    if (!isNew && old) checkpointBefore(old, a);
+    a.pts = a.pts.slice(0, 2); delete a.text;
+  } else if (!text){
     if (page) page.anns = page.anns.filter(x => x !== a);
     if (isNew) { S.undo.pop(); updateUndoBtns(); } else checkpointBefore(old, a);
     S.sel = null;
@@ -1259,6 +1395,9 @@ function updateProps(){
   $('#propTitle').textContent = sel ? TYPE_NAME[sel.type] : (TYPE_NAME[S.tool] || '');
   const show = new Set(t ? PROPS[t.type] || [] : []);
   if (sel) show.add('selActions');
+  if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
+  $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
+  syncAngle();
   $$('#props .prop').forEach(el => el.hidden = !show.has(el.dataset.p));
   $('#propHint').textContent = !t ? (S.tool === 'select' ? 'Select a markup to change its colour, size or text.' : S.tool === 'calibrate' ? 'Drag along a known dimension.' : '') : (sel && sel.type === 'patch' ? 'Drag to reposition the moved area. Delete to put it back.' : '');
   if (!t) return;
@@ -1267,7 +1406,9 @@ function updateProps(){
   if (st.color && /^#/.test(st.color)) $('#pColor').value = st.color.length === 4 ? '#' + st.color.slice(1).split('').map(x=>x+x).join('') : st.color;
   if (st.lw != null) $('#pLw').value = st.lw;
   if (st.dash) $('#pDash').value = st.dash;
-  if (st.fill) $('#pFill').value = st.fill;
+  $('#pFill').value = st.fill === 'white' ? 'solid' : (st.fill || 'none');
+  { const fc = st.fill === 'white' ? '#ffffff' : (st.fillColor || st.color || '#ffeb3b'); if (/^#/.test(fc)) $('#pFillColor').value = fc.length === 4 ? '#' + fc.slice(1).split('').map(x=>x+x).join('') : fc; }
+  if (st.shape) $('#pShape').value = st.shape;
   if (st.tfill) $('#pTFill').value = st.tfill;
   if (st.fs != null) $('#pFs').value = st.fs;
   $('#pOpacity').value = Math.round((st.opacity ?? 1)*100);
@@ -1287,10 +1428,21 @@ function applyProp(key, val, final){
   } else {
     styleNow[key] = val;
     if (S.styles[t.type]) S.styles[t.type][key] = val;
+    if (key === 'fill' && val === 'solid' && styleNow.fillColor == null){ styleNow.fillColor = styleNow.color; }
+    if (key === 'fillColor' && (!styleNow.fill || styleNow.fill === 'none' || styleNow.fill === 'white')){ styleNow.fill = 'tint'; if (S.styles[t.type]) S.styles[t.type].fill = 'tint'; }
   }
   if (sel) markDirty(); else render();
   updateProps();
 }
+function syncAngle(){ const a = getSel(), el = $('#pAngle'); if (a && ROT_TYPES.has(a.type) && document.activeElement !== el) el.value = Math.round((a.rot || 0)*180/Math.PI); }
+function rotateSelBy(deg){
+  const a = getSel(); if (!a || NO_ROTATE.has(a.type)) return;
+  checkpoint(); const r = deg*Math.PI/180;
+  if (ROT_TYPES.has(a.type)) a.rot = normAng((a.rot || 0) + r);
+  else { const b = annBBox(a), c = [b[0]+b[2]/2, b[1]+b[3]/2]; a.pts = a.pts.map(q => rotAround(q, c, r)); }
+  markDirty(); updateProps();
+}
+function setSelAngle(deg){ const a = getSel(); if (!a || !ROT_TYPES.has(a.type) || isNaN(deg)) return; checkpoint(); a.rot = normAng(deg*Math.PI/180); markDirty(); }
 function bindProp(id, key, conv){
   const el = $(id);
   el.addEventListener('input', () => applyProp(key, conv(el.value), false));
@@ -1376,15 +1528,15 @@ async function rotatePage(){
   const H = PH(page);
   const rotPt = q => [H - q[1], q[0]];
   for (const a of page.anns){
-    a.pts = a.pts.map(rotPt);
-    if (a.type === 'patch'){
-      const [x, y, w, h] = a.src; a.src = [H - (y + h), x, h, w];
-      const im = await cacheAsset(a.asset), cv = document.createElement('canvas');
-      cv.width = im.naturalHeight; cv.height = im.naturalWidth;
-      const c = cv.getContext('2d'); c.translate(cv.width, 0); c.rotate(Math.PI/2); c.drawImage(im, 0, 0);
-      a.asset = addAsset(cv.toDataURL('image/png')); await cacheAsset(a.asset);
-    }
-    if (a.type === 'text' || a.type === 'legend'){ /* keep text upright; anchor moved */ }
+    if (ROT_TYPES.has(a.type)){
+      if (a.type === 'text' || a.type === 'legend') a.pts = [rotPt(a.pts[0])];
+      else {
+        const [x, y, w, h] = box(a.pts), nc = rotPt([x+w/2, y+h/2]);
+        a.pts = [[nc[0]-w/2, nc[1]-h/2], [nc[0]+w/2, nc[1]+h/2], ...a.pts.slice(2).map(rotPt)];
+      }
+      a.rot = normAng((a.rot || 0) + Math.PI/2);
+      if (a.type === 'patch'){ const [x, y, w, h] = a.src; a.src = [H - (y + h), x, h, w]; }
+    } else a.pts = a.pts.map(rotPt);
   }
   page.rot = (page.rot + 90) % 360; page.bg = null;
   renderThumb(S.cur); fitPage(); markDirty(); updateAll();
@@ -1450,7 +1602,38 @@ function ask(title, msg, okLabel, cancelLabel){
   });
 }
 let toastTimer = null;
-function toast(msg, ms = 3000){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, ms); }
+function toast(msg, ms = 3000, kind = ''){ const t = $('#toast'); t.textContent = msg; t.className = kind; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, ms); }
+function setDirty(v){
+  S.dirty = v; const el = $('#saveState');
+  if (!S.doc){ el.hidden = true; return; }
+  el.hidden = false; el.className = v ? 'dirty' : 'saved'; el.textContent = v ? 'Not saved' : 'Saved';
+  el.title = v ? 'You have changes that are not saved to a file yet – click Save' : 'All changes saved to a project file';
+}
+function openSaveDialog(){
+  if (!S.doc) return;
+  commitEditor();
+  modal('Save', `
+    <label class="field"><span>File name</span><input type="text" id="svName"></label>
+    <label class="field"><span>Date</span><input type="date" id="svDate"></label>
+    <div class="save-file">Files will be named <b id="svFile"></b></div>
+    <div class="save-grid">
+      <button class="save-opt primary" data-sv="project"><b>Save project</b><small>Keeps everything editable. Reopen it later with Open and carry on marking up (.adimarkup.json)</small></button>
+      <button class="save-opt" data-sv="pdf"><b>PDF</b><small>Marked-up drawing, all pages – to send or issue</small></button>
+      <button class="save-opt" data-sv="png"><b>PNG image</b><small>This page, full quality</small></button>
+      <button class="save-opt" data-sv="jpg"><b>JPEG image</b><small>This page, smaller file</small></button>
+      <button class="save-opt" data-sv="csv"><b>Schedule (CSV)</b><small>Every markup and measurement, for Excel</small></button>
+    </div>
+    <p class="muted" style="margin:0">Files go to your Downloads folder. If your browser asks where to save or to confirm, accept it.</p>`,
+    [{label:'Close', fn: () => true}],
+    () => {
+      const upd = () => { $('#svFile').textContent = baseName() + '.…'; };
+      $('#svName').value = S.doc.name; $('#svDate').value = S.doc.date; upd();
+      $('#svName').addEventListener('input', e => { S.doc.name = e.target.value; setDirty(true); upd(); });
+      $('#svDate').addEventListener('input', e => { S.doc.date = e.target.value; setDirty(true); upd(); });
+      $$('[data-sv]').forEach(b => b.onclick = () => { const k = b.dataset.sv; closeModal(); updateAll(); if (k === 'project') saveProject(false); else exportAs(k); });
+      setTimeout(() => $('[data-sv=project]').focus(), 30);
+    });
+}
 function showBusy(msg){ toast(msg, 60000); }
 function hideBusy(){ const t = $('#toast'); if (/…$/.test(t.textContent)) t.hidden = true; }
 
@@ -1528,6 +1711,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '+' || e.key === '='){ zoomCenter(1.25); return; }
   if (e.key === '-' || e.key === '_'){ zoomCenter(0.8); return; }
   if (e.key === '0'){ fitPage(); return; }
+  if ((e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') && getSel()){ e.preventDefault(); rotateSelBy((e.key === '[' || e.key === '{' ? -1 : 1) * (e.shiftKey ? 90 : 15)); return; }
   if (KEYMAP[k]) setTool(KEYMAP[k]);
 });
 document.addEventListener('keyup', e => { if (e.key === ' '){ S.space = false; view.classList.toggle('pan', S.tool === 'pan'); } });
@@ -1556,12 +1740,13 @@ function init(){
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   view.addEventListener('wheel', onWheel, {passive:false});
   view.tabIndex = -1;
-  new ResizeObserver(() => render()).observe(view);
+  let lastTop = view.getBoundingClientRect().top;
+  new ResizeObserver(() => { const t = view.getBoundingClientRect().top; if (S.doc && t !== lastTop) S.oy += lastTop - t; lastTop = t; draw(); }).observe(view);
 
   $('#btnOpen').onclick = $('#btnOpen2').onclick = () => $('#fileOpen').click();
   $('#fileOpen').onchange = e => { openFile(e.target.files[0]); e.target.value = ''; };
   $('#fileImage').onchange = e => { insertImageFile(e.target.files[0]); e.target.value = ''; };
-  $('#btnSave').onclick = () => saveProject(false);
+  $('#btnSave').onclick = openSaveDialog;
   $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
   $('#btnExport').onclick = e => { e.stopPropagation(); $('#exportMenu').hidden = !$('#exportMenu').hidden; };
   $$('[data-exp]').forEach(b => b.onclick = () => exportAs(b.dataset.exp));
@@ -1588,6 +1773,10 @@ function init(){
   bindProp('#pLw', 'lw', v => +v); bindProp('#pFs', 'fs', v => +v); bindProp('#pOpacity', 'opacity', v => +v/100);
   bindProp('#pDash', 'dash', v => v); bindProp('#pFill', 'fill', v => v); bindProp('#pTFill', 'tfill', v => v);
   bindProp('#pStamp', 'stamp', v => v); bindProp('#pRev', 'rev', v => v.trim());
+  bindProp('#pFillColor', 'fillColor', v => v); bindProp('#pShape', 'shape', v => v);
+  $$('[data-rot]').forEach(b => b.onclick = () => rotateSelBy(+b.dataset.rot));
+  $('#pAngle').addEventListener('change', e => setSelAngle(parseFloat(e.target.value)));
+  $('#pAngle').addEventListener('keydown', e => e.stopPropagation());
   $('#btnDel').onclick = deleteSel; $('#btnDup').onclick = duplicateSel; $('#btnFront').onclick = bringFront;
 
   // status
@@ -1606,13 +1795,13 @@ function init(){
   });
 
   // document fields
-  const docField = (id, key, after) => $(id).addEventListener('input', e => { if (!S.doc) return; S.doc[key] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (after) after(); S.dirty = true; scheduleAutosave(); updateAll(); });
-  $('#docName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; S.dirty = true; scheduleAutosave(); $('#dName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
-  $('#dName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; S.dirty = true; scheduleAutosave(); $('#docName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
+  const docField = (id, key, after) => $(id).addEventListener('input', e => { if (!S.doc) return; S.doc[key] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (after) after(); setDirty(true); scheduleAutosave(); updateAll(); });
+  $('#docName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; setDirty(true); scheduleAutosave(); $('#dName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
+  $('#dName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; setDirty(true); scheduleAutosave(); $('#docName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
   docField('#dDate', 'date'); docField('#dBy', 'initials'); docField('#dRev', 'rev');
-  $('#dFooter').addEventListener('change', e => { if (!S.doc) return; S.doc.footer = e.target.checked; S.dirty = true; scheduleAutosave(); render(); });
-  $('#dUnits').addEventListener('change', e => { if (!S.doc) return; S.doc.units = e.target.value; S.dirty = true; scheduleAutosave(); updateAll(); });
-  $('#dToday').onclick = () => { if (!S.doc) return; S.doc.date = todayISO(); S.dirty = true; scheduleAutosave(); updateAll(); };
+  $('#dFooter').addEventListener('change', e => { if (!S.doc) return; S.doc.footer = e.target.checked; setDirty(true); scheduleAutosave(); render(); });
+  $('#dUnits').addEventListener('change', e => { if (!S.doc) return; S.doc.units = e.target.value; setDirty(true); scheduleAutosave(); updateAll(); });
+  $('#dToday').onclick = () => { if (!S.doc) return; S.doc.date = todayISO(); setDirty(true); scheduleAutosave(); updateAll(); };
 
   window.addEventListener('beforeunload', e => { if (S.dirty){ e.preventDefault(); e.returnValue = ''; } });
 

@@ -16,7 +16,9 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 | Open | PDF (all pages), JPEG, PNG and saved `.adimarkup.json` projects. Drag and drop or use **Open**. |
 | Scale | Use the **No scale / Scale** button at the bottom. Either type the drawing scale (1:50, 1:100…) for PDFs, or draw along a known dimension and type its length. You can set the scale per page or for all pages. |
 | Measure | Length, multi-point run (total length), and area (m² plus perimeter). Choose mm or m. Page totals appear on the Markups tab. |
-| Draw | Line, arrow, rectangle, ellipse, polygon, freehand, and revision cloud with a rev tag. Shift gives straight lines and squares. Measuring tools snap to markup end points. |
+| Draw | Line, arrow, rectangle, ellipse, polygon and freehand. Shift gives straight lines and squares. Measuring tools snap to markup end points. |
+| Cloud markup | A "bubbly" cloud drawn as a box or an ellipse/circle, with its own outline and fill colour and an attached note. Use it to flag an area for change, an instruction or documentation. Optional rev tag. Double-click a cloud to add or edit its note. |
+| Colours and rotation | Every shape has an outline colour, plus a fill colour with strength (none, light, medium, solid). Rotate any selected markup by dragging the round handle above it (Shift snaps to 15°), with the ⟲/⟳ buttons, by typing an angle, or with `[` and `]`. |
 | Colour code | Swatches with meanings (red = remove, green = new, etc.), which you can edit in Settings. The **Colour key** tool places a legend on the drawing. |
 | Text | Text boxes and callouts (arrow plus note). To "edit" existing text, use **White-out** to cover the old text, then type over it. |
 | Highlight | Highlighter pen and highlight box. |
@@ -24,7 +26,7 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 | Move part of a drawing | **Move part of drawing** tool: box an area, then drag it to its new position. The original spot is whited out. |
 | Images | Insert a signature, logo or photo, or paste one with Ctrl+V. |
 | Pages | Thumbnails, page navigation, rotate page. |
-| Save | **Save** writes an `.adimarkup.json` project (the original file plus your markups). Reopen it later and keep editing. The app also autosaves your last session in the browser. |
+| Save | **Save** opens a window where you can rename the file, set the date, and choose **Save project** (an editable `.adimarkup.json` file you reopen with **Open**) or export a PDF, PNG, JPEG or CSV. A badge next to the name shows **Not saved** or **Saved**, and a confirmation appears at the top of the screen when a file is saved. The app also autosaves your last session in the browser. |
 | Export | PDF (all pages, original drawing kept as vectors), PNG, JPEG, and a CSV schedule of every markup and measurement. |
 | Rename and date | Rename in the header or the Document tab. Today's date is filled in automatically and used in file names (`Name_2026-11-04.pdf`). An optional ADI footer stamp (name, date, initials, rev) is added to each page. |
 
@@ -40,7 +42,7 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 | E | Ellipse | | Y | Highlighter |
 | P | Polygon | | B | Highlight box |
 | F | Freehand | | W | White-out |
-| C | Revision cloud | | X | Move part of drawing |
+| C | Cloud markup | | X | Move part of drawing |
 | M | Measure | | N | Run |
 | U | Area | | | |
 
@@ -52,6 +54,7 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 | Ctrl+C / Ctrl+V | Copy and paste markups (works across pages) |
 | Del | Delete the selected markup |
 | Arrow keys | Nudge the selected markup |
+| `[` / `]` | Rotate the selected markup 15° (with Shift: 90°) |
 | Mouse wheel / + / − / 0 | Zoom / zoom in / zoom out / fit page |
 | Page Up / Page Down | Change page |
 
