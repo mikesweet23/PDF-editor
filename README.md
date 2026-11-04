@@ -13,7 +13,7 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 
 | Area | What you can do |
 |---|---|
-| Open | PDF (all pages), JPEG, PNG and saved `.adimarkup.json` projects. Drag and drop or use **Open**. |
+| Open | PDF (all pages), JPEG, PNG, TIFF (including multi-page TIFFs, LZW/Deflate/JPEG/CCITT), WebP, GIF, BMP and saved `.adimarkup.json` projects. Drag and drop or use **Open**. Images can also be dropped onto an open drawing to place them on the page. |
 | Scale | Use the **No scale / Scale** button at the bottom. Either type the drawing scale (1:50, 1:100…) for PDFs, or draw along a known dimension and type its length. You can set the scale per page or for all pages. |
 | Measure | Length, multi-point run (total length), and area (m² plus perimeter). Choose mm or m. Page totals appear on the Markups tab. |
 | Draw | Line, arrow, rectangle, ellipse, polygon and freehand. Shift gives straight lines and squares. Measuring tools snap to markup end points. |
@@ -66,4 +66,5 @@ The ⚙ button lets you set your initials, upload the company logo (used in the 
 
 - PDF export keeps the original drawing as vectors and lays the markups over it, so text and linework stay sharp.
 - White-out covers text visually. The original text is still inside the PDF underneath, so someone could still copy or search it.
-- Libraries: [pdf.js](https://mozilla.github.io/pdf.js/) 3.11.174 and [pdf-lib](https://pdf-lib.js.org/) 1.17.1, both loaded from cdnjs.
+- Libraries: [pdf.js](https://mozilla.github.io/pdf.js/) 3.11.174 and [pdf-lib](https://pdf-lib.js.org/) 1.17.1 from cdnjs. For TIFF files only, [UTIF.js](https://github.com/photopea/UTIF.js) 3.1.0 (jsDelivr) and [pako](https://github.com/nodeca/pako) 2.1.0 (cdnjs) are loaded when needed.
+- Marked-up images can be exported as PDF (all pages), PNG or JPEG.
