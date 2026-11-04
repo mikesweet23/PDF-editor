@@ -79,6 +79,20 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 .swatches{display:flex;gap:4px}
 .sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px #b8c0cc;padding:0}
 .sw.on{box-shadow:0 0 0 2px var(--navy)}
+.sigs{display:flex;gap:8px;align-items:center}
+.sig-chip{position:relative;height:34px;min-width:64px;border:1px solid var(--border);border-radius:6px;background:#fff;padding:2px 8px;display:grid;place-items:center}
+.sig-chip.on{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
+.sig-chip img{max-height:28px;max-width:130px;display:block}
+.sig-chip .x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:var(--danger);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer}
+.sig-tabs{display:flex;gap:6px;margin-bottom:12px}
+.sig-tabs button{flex:1;border:1px solid var(--border);background:var(--field);color:var(--text);border-radius:7px;padding:8px}
+.sig-tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sig-pad{position:relative;background:#fff;border:1px solid var(--border);border-radius:8px;height:190px;touch-action:none;overflow:hidden}
+.sig-pad::after{content:"";position:absolute;left:24px;right:24px;bottom:44px;border-bottom:1.5px dashed #9aa6b8;pointer-events:none}
+.sig-pad canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.sig-pad .ph{position:absolute;left:26px;bottom:20px;color:#8792a4;font-size:12px;pointer-events:none}
+.sig-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sig-note{background:var(--bg);border-radius:8px;padding:9px 11px;font-size:12.5px;color:var(--muted);margin:12px 0 0}
 #pColor,#pFillColor{width:28px;height:26px;border:1px solid var(--border);border-radius:6px;padding:1px;background:var(--field)}
 .pbtn{border:1px solid var(--border);background:var(--field);border-radius:6px;padding:4px 10px;color:var(--text)}
 .pbtn:hover{background:var(--bg)}
@@ -245,6 +259,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
   <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
+  <div class="prop" data-p="sig"><div class="sigs" id="sigList"></div><button class="pbtn" id="sigNew">+ New signature</button><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="sigDate"> Add “Signed” date</label></div>
   <span class="prop" data-p="rot">Rotate
     <button class="pbtn" data-rot="-90" title="Rotate 90° anticlockwise">⟲ 90°</button><button class="pbtn" data-rot="-15" title="Rotate 15° anticlockwise ( [ )">⟲ 15°</button><button class="pbtn" data-rot="15" title="Rotate 15° clockwise ( ] )">⟳ 15°</button><button class="pbtn" data-rot="90" title="Rotate 90° clockwise">⟳ 90°</button>
     <span id="pAngleWrap"><input type="number" id="pAngle" step="1" min="-180" max="180" title="Angle in degrees" style="width:62px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--field);color:var(--text)">°</span>
@@ -358,7 +373,7 @@ const settings = (() => {
   try { s = JSON.parse(localStorage.getItem('adi-markup.settings') || '{}'); } catch (e) {}
   return Object.assign({initials:'', footer:true, units:'mm', logo:null, legend:DEFAULT_LEGEND.map(x=>({...x}))}, s);
 })();
-function saveSettings(){ try { localStorage.setItem('adi-markup.settings', JSON.stringify(settings)); } catch (e) { toast('Could not store settings in this browser.'); } }
+function saveSettings(){ try { localStorage.setItem('adi-markup.settings', JSON.stringify(settings)); return true; } catch (e) { toast('Could not store this in your browser (storage is blocked or full, e.g. in a private window).', 6000, 'err'); return false; } }
 let logoImg = null;
 function loadLogo(){
   if (!settings.logo){ logoImg = null; $('#brandLogo').hidden = true; $('#wordmark').hidden = false; return; }
@@ -381,6 +396,7 @@ const IC = {
   callout:'<path d="M4 4h16v10H10l-5 5v-5H4z"/>',
   stamp:'<path d="M9 3h6l-1 7h4a2 2 0 012 2v3H4v-3a2 2 0 012-2h4zM4 19h16"/>',
   image:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-9 8"/>',
+  signature:'<path d="M3 16c2-4 4-9 6-9 2.5 0-1.5 9 1 9 2 0 2.5-4 4-4s1 3 3 3h4"/><path d="M3 20h18"/>',
   legend:'<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
   marker:'<path d="M15 4l5 5-8 8H7v-5zM4 21h9"/>',
   hlbox:'<rect x="3" y="7" width="18" height="10" rx="1" fill="currentColor" fill-opacity=".3"/>',
@@ -394,12 +410,13 @@ const IC = {
 const TOOLS = [
   ['select','V','Select / move'],['pan','H','Pan (or hold Space)'],null,
   ['line','L','Line'],['arrow','A','Arrow'],['rect','R','Rectangle'],['ellipse','E','Ellipse / circle'],['polygon','P','Polygon'],['pen','F','Freehand'],['cloud','C','Cloud markup (box or ellipse + note)'],null,
-  ['text','T','Text'],['callout','O','Callout (arrow + note)'],['stamp','S','Stamp'],['image','I','Image / signature (or paste)'],['legend','K','Colour key'],null,
+  ['text','T','Text'],['callout','O','Callout (arrow + note)'],['stamp','S','Stamp'],['signature','G','Sign – place your saved signature'],['image','I','Image (or paste)'],['legend','K','Colour key'],null,
   ['marker','Y','Highlighter'],['hlbox','B','Highlight box'],null,
   ['whiteout','W','White-out (cover)'],['movearea','X','Move part of drawing'],null,
   ['calibrate','','Set scale from a known dimension'],['measure','M','Measure length'],['run','N','Measure run (multi-point)'],['area','U','Measure area'],
 ];
-const TYPE_NAME = {line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
+const typeName = a => a.sig ? 'Signature' : (TYPE_NAME[a.type] || a.type);
+const TYPE_NAME = {signature:'Sign', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
 const HINTS = {
   select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
   pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
@@ -409,7 +426,8 @@ const HINTS = {
   pen:'Drag to draw freehand.', cloud:'Drag around the area. Pick Box or Ellipse and a fill above; Shift = square/circle. Then type a note (Esc to skip).',
   text:'Click to place text. Ctrl+Enter or click away to finish.', callout:'Drag from the item you are pointing at to where the note should go.',
   stamp:'Pick a stamp above, then click to place it. Drag a corner handle to resize.',
-  image:'Choose an image or signature to insert. You can also paste an image with Ctrl+V.',
+  image:'Choose an image to insert. You can also paste an image with Ctrl+V.',
+  signature:'Click on the drawing to place your signature. Drag a corner to resize. Pick, add or delete signatures above.',
   legend:'Click to place a colour key. Edit the meanings in Settings.',
   marker:'Drag over items to highlight them.', hlbox:'Drag a box to highlight an area.',
   whiteout:'Drag to cover part of the drawing. Then add text on top to “edit” it.',
@@ -423,7 +441,7 @@ const PROPS = {
   line:['color','lw','dash','opacity'], arrow:['color','lw','dash','opacity'], pen:['color','lw','opacity'],
   rect:['color','lw','dash','fill','opacity'], ellipse:['color','lw','dash','fill','opacity'], polygon:['color','lw','dash','fill','opacity'],
   cloud:['color','lw','fill','shape','fs','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
-  image:['opacity'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
+  image:['opacity'], signature:['sig'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
   patch:[], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
 };
 const STAMPS = {
@@ -435,7 +453,7 @@ const DEF_STYLES = {
   rect:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1}, ellipse:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1},
   polygon:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1}, pen:{color:'#e53935',lw:3,opacity:1},
   cloud:{color:'#e53935',lw:3,rev:'',fill:'none',fillColor:'#ffeb3b',shape:'box',fs:11}, text:{color:'#1565c0',fs:12,tfill:'none'}, callout:{color:'#1565c0',lw:2,fs:11},
-  stamp:{color:STAMPS['APPROVED'],stamp:'APPROVED',opacity:0.9}, image:{opacity:1}, legend:{fs:10},
+  stamp:{color:STAMPS['APPROVED'],stamp:'APPROVED',opacity:0.9}, image:{opacity:1}, signature:{}, legend:{fs:10},
   marker:{color:'#ffeb3b',lw:14,opacity:0.4}, hlbox:{color:'#ffeb3b',opacity:0.35}, whiteout:{color:'#ffffff'}, patch:{},
   measure:{color:'#6a1b9a',lw:2,fs:10}, run:{color:'#6a1b9a',lw:2,fs:10}, area:{color:'#6a1b9a',lw:2,fs:10,fill:'tint'},
 };
@@ -495,6 +513,7 @@ function annValue(a, page){
   if (a.type === 'area') return `${fmtArea(polyArea(a.pts), page)} · P ${fmtLen(polyLen(a.pts, true), page)}`;
   if (a.type === 'text' || a.type === 'callout' || a.type === 'cloud') return (a.text || '').replace(/\s+/g,' ');
   if (a.type === 'stamp') return a.stamp;
+  if (a.sigLabel) return a.sigLabel;
   return '';
 }
 const legendLabel = c => { const e = settings.legend.find(l => l.c.toLowerCase() === String(c||'').toLowerCase()); return e ? e.label : ''; };
@@ -680,7 +699,11 @@ function drawAnnBody(c, a, page){
       const f2 = Math.min(h*0.14, (w*0.84)/sw); c.font = `600 ${f2}px ${FONT}`; c.fillText(sub, x+w/2, y+h*0.75);
       a._b = [x,y,w,h];
       break; }
-    case 'image': { const im = S.imgCache[a.asset]; const b = box(P); if (im && im.complete) c.drawImage(im, ...b); else { c.strokeStyle = '#999'; c.strokeRect(...b); } break; }
+    case 'image': {
+      const im = S.imgCache[a.asset]; const b = box(P);
+      if (im && im.complete) c.drawImage(im, ...b); else { c.strokeStyle = '#999'; c.strokeRect(...b); }
+      if (a.sigLabel){ const f = Math.max(b[3]*0.17, u*4); c.globalAlpha = 1; c.fillStyle = '#1b2533'; c.font = `${f}px ${FONT}`; c.textBaseline = 'top'; c.textAlign = 'left'; c.fillText(a.sigLabel, b[0], b[1] + b[3] + f*0.15); }
+      break; }
     case 'patch': {
       const im = S.imgCache[a.asset]; if (im && im.complete) c.drawImage(im, ...box(P));
       break; }
@@ -750,6 +773,7 @@ function drawFooter(c, page){
 }
 
 function annBBox(a){
+  if (a.type === 'image' && a.sigLabel){ const b = box(a.pts); return [b[0], b[1], b[2], b[3]*1.25]; }
   if (a.type === 'cloud') return box(a.pts);
   if (a._b && ['text','callout','legend','stamp'].includes(a.type)){
     if (a.type === 'callout'){ const b = a._b; const xs = [b[0], b[0]+b[2], a.pts[0][0]], ys = [b[1], b[1]+b[3], a.pts[0][1]]; return [Math.min(...xs), Math.min(...ys), Math.max(...xs)-Math.min(...xs), Math.max(...ys)-Math.min(...ys)]; }
@@ -897,7 +921,7 @@ function markDirty(){
 }
 
 /* ---------- Assets (images, moved areas) ---------- */
-function addAsset(dataURL){ const id = 'as_' + uid(); S.doc.assets[id] = dataURL; cacheAsset(id); return id; }
+function addAsset(dataURL){ const ex = Object.keys(S.doc.assets).find(k => S.doc.assets[k] === dataURL); if (ex) return ex; const id = 'as_' + uid(); S.doc.assets[id] = dataURL; cacheAsset(id); return id; }
 function cacheAsset(id){ return new Promise(res => { if (S.imgCache[id] && S.imgCache[id].complete) return res(S.imgCache[id]); const im = new Image(); im.onload = () => { render(); res(im); }; im.onerror = () => res(im); im.src = S.doc.assets[id]; S.imgCache[id] = im; }); }
 
 /* ---------- Open documents ---------- */
@@ -1115,7 +1139,7 @@ async function exportCSV(){
       if (a.type === 'area'){ area = (polyArea(a.pts) * p.mm * p.mm / 1e6).toFixed(2); per = Math.round(polyLen(a.pts, true) * p.mm); }
     }
     const detail = a.type === 'stamp' ? a.stamp : (a.text || '');
-    rows.push([d.name, ukDate(d.date), i+1, TYPE_NAME[a.type] || a.type, (a.style && a.style.color) || '', legendLabel(a.style && a.style.color), len, area, per, detail]);
+    rows.push([d.name, ukDate(d.date), i+1, typeName(a), (a.style && a.style.color) || '', legendLabel(a.style && a.style.color), len, area, per, detail]);
   }));
   const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }).join(',')).join('\r\n');
   const n = await saveBlob(new Blob([csv], {type:'text/csv'}), `${baseName()}_schedule.csv`, 'CSV spreadsheet', 'text/csv', '.csv');
@@ -1148,6 +1172,7 @@ function setTool(t){
   view.classList.toggle('pan', t === 'pan');
   view.classList.toggle('draw', !['select','pan','text'].includes(t));
   view.classList.toggle('text', t === 'text');
+  if (t === 'signature' && !curSig()) setTimeout(openSignatureModal, 0);
   if (['measure','run','area'].includes(t) && cur() && !cur().mm) toast('This page has no scale yet – click “No scale” at the bottom (or the ruler tool) to set one.', 5000);
   updateProps(); updateHint(); render();
 }
@@ -1217,6 +1242,7 @@ function onDown(e){
     const a = {id:uid(), type:'stamp', pts:[[p[0]-w/2, p[1]-h/2],[p[0]+w/2, p[1]+h/2]], style, stamp: style.stamp || 'APPROVED', by:S.doc.initials, date:S.doc.date};
     page.anns.push(a); S.sel = a.id; markDirty(); setTool('select'); S.sel = a.id; updateProps(); return;
   }
+  if (t === 'signature'){ const sig = curSig(); if (!sig) openSignatureModal(); else placeSignature(sig, p); return; }
   if (t === 'legend'){
     checkpoint();
     const a = {id:uid(), type:'legend', pts:[p], style};
@@ -1260,12 +1286,24 @@ function onMove(e){
       const a = dr.a;
       if (isRot(a) && a.pts.length >= 2 && dr.i < 2){
         const j = dr.i === 0 ? 1 : 0, Wj = dr.Wj || (dr.Wj = toWorld(a, a.pts[j]));
+        if ((a.type === 'image' || a.type === 'stamp') && !e.altKey){
+          const ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
+          const D = rotAround([p[0]-Wj[0], p[1]-Wj[1]], [0,0], -a.rot);
+          if (Math.abs(D[0])/ar > Math.abs(D[1])) D[1] = Math.sign(D[1] || 1)*Math.abs(D[0])/ar; else D[0] = Math.sign(D[0] || 1)*Math.abs(D[1])*ar;
+          const W2 = rotAround(D, [0,0], a.rot); p = [Wj[0]+W2[0], Wj[1]+W2[1]];
+        }
         const c2 = [(Wj[0]+p[0])/2, (Wj[1]+p[1])/2], hv = rotAround([p[0]-c2[0], p[1]-c2[1]], [0,0], -a.rot);
         a.pts[dr.i] = [c2[0]+hv[0], c2[1]+hv[1]]; a.pts[j] = [c2[0]-hv[0], c2[1]-hv[1]];
         render(); return;
       }
       p = snapPt(p, a);
       if (e.shiftKey && a.pts.length === 2 && ['line','arrow','measure','callout'].includes(a.type)) p = constrainAngle(a.pts[1-dr.i], p);
+      if ((a.type === 'image' || a.type === 'stamp') && a.pts.length === 2 && !e.altKey){
+        const q = a.pts[1-dr.i], ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
+        let dx = p[0]-q[0], dy = p[1]-q[1];
+        if (Math.abs(dx)/ar > Math.abs(dy)) dy = Math.sign(dy || 1)*Math.abs(dx)/ar; else dx = Math.sign(dx || 1)*Math.abs(dy)*ar;
+        p = [q[0]+dx, q[1]+dy];
+      }
       a.pts[dr.i] = p; render(); return;
     }
   }
@@ -1425,9 +1463,10 @@ function currentStyleTarget(){
 }
 function updateProps(){
   const t = currentStyleTarget(), sel = getSel();
-  $('#propTitle').textContent = sel ? TYPE_NAME[sel.type] : (TYPE_NAME[S.tool] || '');
+  $('#propTitle').textContent = sel ? typeName(sel) : (TYPE_NAME[S.tool] || '');
   const show = new Set(t ? PROPS[t.type] || [] : []);
   if (sel) show.add('selActions');
+  if (show.has('sig')) renderSigList();
   if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
   $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
   syncAngle();
@@ -1583,7 +1622,7 @@ function renderMarkupList(){
   el.innerHTML = page.anns.map((a, i) => ({a, i})).reverse().map(({a}) => `
     <li class="mk ${a.id === S.sel ? 'on' : ''}" data-id="${a.id}">
       <span class="dot" style="background:${esc((a.style && a.style.color && a.type !== 'patch') ? a.style.color : '#fff')}"></span>
-      <span class="t"><b>${esc(TYPE_NAME[a.type] || a.type)}</b><small>${esc(annValue(a, page) || legendLabel(a.style && a.style.color) || '')}</small></span>
+      <span class="t"><b>${esc(typeName(a))}</b><small>${esc(annValue(a, page) || legendLabel(a.style && a.style.color) || '')}</small></span>
       <button class="del" title="Delete" data-del="${a.id}">×</button>
     </li>`).join('');
   // totals
@@ -1717,6 +1756,145 @@ async function insertImageFile(file){
   toast('Image added – drag to move, drag a corner handle to resize.');
 }
 
+/* ---------- Signatures (stored only in this browser) ---------- */
+const SIG_FONTS = ['Caveat', 'Dancing Script', 'Homemade Apple'];
+let sigFontsLoaded = false;
+function loadSigFonts(){
+  if (sigFontsLoaded) return; sigFontsLoaded = true;
+  const l = document.createElement('link'); l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Homemade+Apple&display=swap';
+  document.head.appendChild(l);
+}
+const curSig = () => { const l = settings.signatures || []; return l.find(x => x.id === settings.sigSel) || l[0] || null; };
+function trimCanvas(cv, pad = 10){
+  const w = cv.width, h = cv.height, d = cv.getContext('2d').getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y*w + x)*4 + 3] > 10){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  x0 = Math.max(0, x0-pad); y0 = Math.max(0, y0-pad); x1 = Math.min(w-1, x1+pad); y1 = Math.min(h-1, y1+pad);
+  const sw = x1-x0+1, sh = y1-y0+1, k = Math.min(1, 900/sw), out = document.createElement('canvas');
+  out.width = Math.round(sw*k); out.height = Math.round(sh*k);
+  const oc = out.getContext('2d'); oc.imageSmoothingQuality = 'high'; oc.drawImage(cv, x0, y0, sw, sh, 0, 0, out.width, out.height);
+  return out;
+}
+function recolor(cv, col){ const c = cv.getContext('2d'); c.save(); c.globalCompositeOperation = 'source-in'; c.fillStyle = col; c.fillRect(0, 0, cv.width, cv.height); c.restore(); }
+function renderSigList(){
+  const list = settings.signatures || [], cs = curSig();
+  $('#sigList').innerHTML = list.length
+    ? list.map(x => `<button class="sig-chip ${cs && x.id === cs.id ? 'on' : ''}" data-sig="${x.id}" title="Use this signature"><img src="${x.img}" alt="Saved signature"><span class="x" data-sigdel="${x.id}" title="Delete this signature" role="button" aria-label="Delete signature">×</span></button>`).join('')
+    : '<span class="muted">No signature saved yet</span>';
+  $('#sigDate').checked = settings.sigDate !== false;
+}
+async function placeSignature(sig, p){
+  const page = cur(), u = unitOf(page), id = addAsset(sig.img), im = await cacheAsset(id);
+  const w = Math.max(PW(page)*0.14, u*110), h = w*(im.naturalHeight/im.naturalWidth);
+  checkpoint();
+  const a = {id:uid(), type:'image', sig:true, pts:[[p[0]-w/2, p[1]-h/2], [p[0]+w/2, p[1]+h/2]], asset:id, style:{opacity:1}};
+  if (settings.sigDate !== false) a.sigLabel = (S.doc.initials ? `Signed by ${S.doc.initials} · ` : 'Signed ') + ukDate(todayISO());
+  page.anns.push(a);
+  setTool('select'); S.sel = a.id; markDirty(); updateProps();
+}
+function openSignatureModal(){
+  loadSigFonts();
+  let mode = 'draw', ink = '#0b1f4d', drawn = false, upCanvas = null;
+  const typedCanvas = () => {
+    const pv = $('#sigTypePrev'), dpr = 2, txt = $('#sigText').value.trim(), font = $('#sigFont').value;
+    pv.width = pv.clientWidth*dpr; pv.height = pv.clientHeight*dpr;
+    const c = pv.getContext('2d'); c.clearRect(0, 0, pv.width, pv.height);
+    let fs = 70*dpr; c.font = `${fs}px "${font}", cursive`;
+    const tw = c.measureText(txt).width; if (tw > pv.width*0.9){ fs *= pv.width*0.9/tw; c.font = `${fs}px "${font}", cursive`; }
+    c.fillStyle = ink; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, pv.width/2, pv.height/2);
+    return pv;
+  };
+  const refreshTyped = async () => { const f = $('#sigFont').value; try { await document.fonts.load(`70px "${f}"`); } catch (e) {} typedCanvas(); };
+  modal('New signature', `
+    <div class="sig-tabs" role="tablist">
+      <button data-st="draw" class="on">Draw</button><button data-st="type">Type</button><button data-st="upload">Upload image</button>
+    </div>
+    <div id="sigDraw"><div class="sig-pad"><canvas id="sigPadCv"></canvas><span class="ph" id="sigPh">Sign above the line with your mouse, finger or pen</span></div></div>
+    <div id="sigType" hidden>
+      <div class="sig-row" style="margin:0 0 10px"><input type="text" id="sigText" placeholder="Type your name" style="flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--field);color:var(--text)">
+      <select id="sigFont" style="border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--field);color:var(--text)">${SIG_FONTS.map(f => `<option>${f}</option>`).join('')}</select></div>
+      <div class="sig-pad" style="height:130px"><canvas id="sigTypePrev"></canvas></div>
+    </div>
+    <div id="sigUpload" hidden>
+      <input type="file" id="sigFile" accept="image/png,image/jpeg,image/webp">
+      <p class="muted" style="margin:6px 0 10px">A photo or scan of your signature on white paper. The white background is removed automatically.</p>
+      <div class="sig-pad" style="height:150px"><canvas id="sigUpPrev"></canvas></div>
+    </div>
+    <div class="sig-row"><span class="muted">Ink</span>
+      <button class="sw on" data-ink="#0b1f4d" title="Dark blue-black" style="background:#0b1f4d"></button>
+      <button class="sw" data-ink="#000000" title="Black" style="background:#000"></button>
+      <button class="sw" data-ink="#1546b0" title="Blue" style="background:#1546b0"></button>
+      <span class="spacer"></span><button class="btn" id="sigClear">Clear</button></div>
+    <p class="sig-note">Your signature is saved only in this browser on this computer – nobody else can see or use it, and other people save their own. It is an image of your signature (like a signed scan), not a certificate-based digital signature.</p>`,
+    [{label:'Cancel', fn: () => true}, {label:'Save signature', cls:'primary', fn: () => {
+      let src;
+      if (mode === 'draw'){ if (!drawn){ toast('Sign in the box first.'); return false; } src = $('#sigPadCv'); }
+      else if (mode === 'type'){ if (!$('#sigText').value.trim()){ toast('Type your name first.'); return false; } src = typedCanvas(); }
+      else { if (!upCanvas){ toast('Choose an image of your signature first.'); return false; } src = upCanvas; }
+      const t = trimCanvas(src); if (!t){ toast('The signature is empty.'); return false; }
+      const sig = {id:'sig_' + uid(), img:t.toDataURL('image/png')};
+      settings.signatures = [...(settings.signatures || []), sig]; settings.sigSel = sig.id;
+      if (!saveSettings()){ settings.signatures.pop(); return false; }
+      toast('✓ Signature saved in this browser. Click on the drawing to place it.', 5000, 'ok');
+      if (S.doc){ if (S.tool !== 'signature') setTool('signature'); else updateProps(); }
+      return true;
+    }}],
+    () => {
+      const pad = $('#sigPadCv'), dpr = window.devicePixelRatio || 1;
+      pad.width = pad.clientWidth*dpr; pad.height = pad.clientHeight*dpr;
+      const pc = pad.getContext('2d'); pc.lineCap = 'round'; pc.lineJoin = 'round';
+      const pp = e => { const r = pad.getBoundingClientRect(); return [(e.clientX - r.left)*dpr, (e.clientY - r.top)*dpr]; };
+      let last = null, lastMid = null;
+      pad.addEventListener('pointerdown', e => { e.preventDefault(); pad.setPointerCapture(e.pointerId); const p = pp(e); last = lastMid = p; pc.fillStyle = ink; pc.beginPath(); pc.arc(p[0], p[1], 1.4*dpr, 0, Math.PI*2); pc.fill(); drawn = true; $('#sigPh').hidden = true; });
+      pad.addEventListener('pointermove', e => {
+        if (!last) return;
+        const p = pp(e), mid = [(last[0]+p[0])/2, (last[1]+p[1])/2];
+        pc.strokeStyle = ink; pc.lineWidth = 2.8*dpr*(e.pointerType === 'pen' && e.pressure ? 0.5 + e.pressure : 1);
+        pc.beginPath(); pc.moveTo(lastMid[0], lastMid[1]); pc.quadraticCurveTo(last[0], last[1], mid[0], mid[1]); pc.stroke();
+        last = p; lastMid = mid;
+      });
+      const end = () => { last = null; }; pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+      $$('[data-st]').forEach(b => b.onclick = () => {
+        mode = b.dataset.st; $$('[data-st]').forEach(x => x.classList.toggle('on', x === b));
+        $('#sigDraw').hidden = mode !== 'draw'; $('#sigType').hidden = mode !== 'type'; $('#sigUpload').hidden = mode !== 'upload';
+        if (mode === 'type'){ refreshTyped(); setTimeout(() => $('#sigText').focus(), 20); }
+      });
+      $('#sigText').addEventListener('input', typedCanvas); $('#sigFont').addEventListener('change', refreshTyped);
+      $$('[data-ink]').forEach(b => b.onclick = () => {
+        ink = b.dataset.ink; $$('[data-ink]').forEach(x => x.classList.toggle('on', x === b));
+        if (drawn) recolor(pad, ink);
+        if (upCanvas){ recolor(upCanvas, ink); showUp(); }
+        if (mode === 'type') typedCanvas();
+      });
+      $('#sigClear').onclick = () => {
+        if (mode === 'draw'){ pc.clearRect(0, 0, pad.width, pad.height); drawn = false; $('#sigPh').hidden = false; }
+        else if (mode === 'type'){ $('#sigText').value = ''; typedCanvas(); }
+        else { upCanvas = null; $('#sigFile').value = ''; const pv = $('#sigUpPrev'); pv.getContext('2d').clearRect(0, 0, pv.width, pv.height); }
+      };
+      const showUp = () => {
+        const pv = $('#sigUpPrev'); pv.width = pv.clientWidth*2; pv.height = pv.clientHeight*2;
+        const c = pv.getContext('2d'), k = Math.min(pv.width*0.92/upCanvas.width, pv.height*0.9/upCanvas.height);
+        c.clearRect(0, 0, pv.width, pv.height); c.drawImage(upCanvas, (pv.width - upCanvas.width*k)/2, (pv.height - upCanvas.height*k)/2, upCanvas.width*k, upCanvas.height*k);
+      };
+      $('#sigFile').onchange = e => {
+        const f = e.target.files[0]; if (!f) return;
+        const im = new Image();
+        im.onload = () => {
+          const k = Math.min(1, 1400/Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
+          cv.width = Math.round(im.naturalWidth*k); cv.height = Math.round(im.naturalHeight*k);
+          const c = cv.getContext('2d'); c.drawImage(im, 0, 0, cv.width, cv.height);
+          const id = c.getImageData(0, 0, cv.width, cv.height), d = id.data;
+          for (let i = 0; i < d.length; i += 4){ const lum = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]; d[i+3] = clamp(Math.round((225 - lum)*2.6), 0, 255) * d[i+3]/255; }
+          c.putImageData(id, 0, 0); recolor(cv, ink); upCanvas = cv; showUp(); URL.revokeObjectURL(im.src);
+        };
+        im.onerror = () => toast('That image could not be read. Use a PNG or JPEG.');
+        im.src = URL.createObjectURL(f);
+      };
+    });
+}
+
 /* ---------- Selection actions ---------- */
 function deleteSel(){ const a = getSel(); if (!a) return; checkpoint(); cur().anns = cur().anns.filter(x => x !== a); S.sel = null; markDirty(); updateProps(); }
 function cloneAnn(a, off){ const c = JSON.parse(JSON.stringify(a, strip)); c.id = uid(); c.pts = c.pts.map(p => [p[0]+off, p[1]+off]); return c; }
@@ -1815,6 +1993,22 @@ function init(){
   $('#pAngle').addEventListener('change', e => setSelAngle(parseFloat(e.target.value)));
   $('#pAngle').addEventListener('keydown', e => e.stopPropagation());
   $('#btnDel').onclick = deleteSel; $('#btnDup').onclick = duplicateSel; $('#btnFront').onclick = bringFront;
+  $('#sigNew').onclick = openSignatureModal;
+  $('#sigDate').onchange = e => { settings.sigDate = e.target.checked; saveSettings(); };
+  $('#sigList').addEventListener('click', e => {
+    const del = e.target.closest('[data-sigdel]');
+    if (del){
+      e.stopPropagation();
+      ask('Delete signature?', 'This removes the saved signature from this browser. Signatures already placed on drawings stay where they are.', 'Delete', 'Keep').then(ok => {
+        if (!ok) return;
+        settings.signatures = (settings.signatures || []).filter(x => x.id !== del.dataset.sigdel);
+        if (settings.sigSel === del.dataset.sigdel) settings.sigSel = null;
+        saveSettings(); updateProps();
+      });
+      return;
+    }
+    const b = e.target.closest('[data-sig]'); if (b){ settings.sigSel = b.dataset.sig; saveSettings(); renderSigList(); }
+  });
 
   // status
   $('#pgPrev').onclick = () => gotoPage(S.cur-1); $('#pgNext').onclick = () => gotoPage(S.cur+1);

@@ -25,6 +25,7 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 | Stamps | APPROVED, APPROVED AS NOTED, REVISED, FOR COMMENT, NOT FOR CONSTRUCTION and more. Each stamp includes ADI Climate Systems, your initials and the date. |
 | Move part of a drawing | **Move part of drawing** tool: box an area, then drag it to its new position. The original spot is whited out. |
 | Images | Insert a signature, logo or photo, or paste one with Ctrl+V. |
+| Sign | **Sign** tool (G): draw, type or upload your signature once and it's saved in your browser. Click to place it on any drawing, optionally with a "Signed by … · date" line. Each person's browser keeps its own signatures; nobody else can see them. It's an image of a signature, not a certificate-based digital signature. Signatures can be resized (proportions kept), rotated and deleted. |
 | Pages | Thumbnails, page navigation, rotate page. |
 | Save | **Save** opens a window where you can rename the file, set the date, and choose **Save project** (an editable `.adimarkup.json` file you reopen with **Open**) or export a PDF, PNG, JPEG or CSV. A badge next to the name shows **Not saved** or **Saved**, and a confirmation appears at the top of the screen when a file is saved. The app also autosaves your last session in the browser. |
 | Export | PDF (all pages, original drawing kept as vectors), PNG, JPEG, and a CSV schedule of every markup and measurement. |
@@ -38,6 +39,7 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 | H / Space | Pan | | O | Callout |
 | L | Line | | S | Stamp |
 | A | Arrow | | I | Image |
+| G | Sign | | | |
 | R | Rectangle | | K | Colour key |
 | E | Ellipse | | Y | Highlighter |
 | P | Polygon | | B | Highlight box |
