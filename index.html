@@ -278,6 +278,8 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="4" max="60" step="1"></label>
   <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
+  <label class="prop" data-p="svc">Service <select id="pSvc"></select></label>
+  <label class="prop" data-p="psize">Size <input type="text" id="pSize" size="7" maxlength="16" placeholder="e.g. 28mm"></label>
   <label class="prop" data-p="tag">Tag <input type="text" id="pTag" size="8" maxlength="24" placeholder="e.g. V1, 25mm"></label>
   <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
   <div class="prop" data-p="sig"><div class="sigs" id="sigList"></div><button class="pbtn" id="sigNew">+ New signature</button><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="sigDate"> Add “Signed” date</label></div>
@@ -301,6 +303,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
     <div class="sym-tools">
       <input type="search" id="symSearch" placeholder="Search, e.g. valve, pump, sensor" aria-label="Search symbols">
       <div class="sym-row">Pipe runs <button class="pbtn on" data-symdir="0" title="Horizontal pipe">⟷ Horizontal</button><button class="pbtn" data-symdir="90" title="Vertical pipe">↕ Vertical</button></div>
+      <label class="sym-check"><input type="checkbox" id="symAutoTag"><span>Number tags automatically (IV1, IV2, P1…)</span></label>
       <label class="sym-check"><input type="checkbox" id="symSched"><span>Add a valve &amp; component schedule to the drawing</span></label>
       <div class="sym-row">Size <input type="range" id="symSize" min="40" max="300" step="10" value="100" aria-label="Symbol size"><span id="symSizeLbl">100%</span></div>
     </div>
@@ -431,6 +434,7 @@ const IC = {
   signature:'<path d="M3 16c2-4 4-9 6-9 2.5 0-1.5 9 1 9 2 0 2.5-4 4-4s1 3 3 3h4"/><path d="M3 20h18"/>',
   legend:'<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
   marker:'<path d="M15 4l5 5-8 8H7v-5zM4 21h9"/>',
+  pipe:'<path d="M3 9h7l3 6h8"/><path d="M3 15h4" stroke-dasharray="2 2.5"/><path d="M14 9h7" stroke-dasharray="2 2.5"/>',
   symbols:'<path d="M2 12h3M19 12h3"/><path d="M5 7v10l7-5zM19 7v10l-7-5z"/><path d="M12 12V5M9 4h6"/>',
   hlbox:'<rect x="3" y="7" width="18" height="10" rx="1" fill="currentColor" fill-opacity=".3"/>',
   whiteout:'<path d="M16 3l5 5-11 11H5l-3-3zM9 9l6 6M13 21h8"/>',
@@ -444,13 +448,13 @@ const TOOLS = [
   ['select','V','Select / move'],['pan','H','Pan (or hold Space)'],null,
   ['line','L','Line'],['arrow','A','Arrow'],['rect','R','Rectangle'],['ellipse','E','Ellipse / circle'],['polygon','P','Polygon'],['pen','F','Freehand'],['cloud','C','Cloud markup (box or ellipse + note)'],null,
   ['text','T','Text'],['callout','O','Callout (arrow + note)'],['stamp','S','Stamp'],['signature','G','Sign – place your saved signature'],['image','I','Image (or paste)'],['legend','K','Colour key'],null,
-  ['symbols','Q','HVAC symbols – valves, pumps, sensors'],null,
+  ['symbols','Q','HVAC symbols – valves, pumps, plant, sensors'],['pipe','J','Pipe service line (LTHW, CHW, CWS…)'],null,
   ['marker','Y','Highlighter'],['hlbox','B','Highlight box'],null,
   ['whiteout','W','White-out (cover)'],['movearea','X','Move part of drawing'],null,
   ['calibrate','','Set scale from a known dimension'],['measure','M','Measure length'],['run','N','Measure run (multi-point)'],['area','U','Measure area'],
 ];
-const typeName = a => a.sig ? 'Signature' : a.type === 'sym' ? ((SYM_BY_ID[a.sym] || {}).n || 'HVAC symbol') : (TYPE_NAME[a.type] || a.type);
-const TYPE_NAME = {signature:'Sign', symbols:'HVAC symbols', sym:'HVAC symbol', schedule:'Valve & component schedule', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
+const typeName = a => a.type === 'pipe' ? 'Pipe – ' + ((SERVICE_BY_ID[a.style.svc] || {}).n || 'service') : a.sig ? 'Signature' : a.type === 'sym' ? ((SYM_BY_ID[a.sym] || {}).n || 'HVAC symbol') : (TYPE_NAME[a.type] || a.type);
+const TYPE_NAME = {pipe:'Pipe service line', signature:'Sign', symbols:'HVAC symbols', sym:'HVAC symbol', schedule:'Valve & component schedule', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
 const HINTS = {
   select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
   pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
@@ -463,6 +467,7 @@ const HINTS = {
   image:'Choose an image to insert. You can also paste an image with Ctrl+V.',
   signature:'Click on the drawing to place your signature. Drag a corner to resize. Pick, add or delete signatures above.',
   legend:'Click to place a colour key. Edit the meanings in Settings.',
+  pipe:'Pick the service above, click along the pipe route, double-click or Enter to finish. Shift = 0/45/90°. Labels repeat on long runs.',
   symbols:'Pick a symbol in the panel, then click on the pipework to place it. Keep clicking to add more. [ ] rotate.',
   marker:'Drag over items to highlight them.', hlbox:'Drag a box to highlight an area.',
   whiteout:'Drag to cover part of the drawing. Then add text on top to “edit” it.',
@@ -477,7 +482,7 @@ const PROPS = {
   rect:['color','lw','dash','fill','opacity'], ellipse:['color','lw','dash','fill','opacity'], polygon:['color','lw','dash','fill','opacity'],
   cloud:['color','lw','fill','shape','fs','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
   image:['opacity'], signature:['sig'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
-  patch:[], schedule:['fs'], sym:['color','lw','fs'], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
+  patch:[], schedule:['fs'], sym:['color','lw','fs','psize'], pipe:['svc','psize','color','lw','dash','fs'], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
 };
 const STAMPS = {
   'APPROVED':'#2e7d32','APPROVED AS NOTED':'#ef6c00','REVISED':'#1565c0','FOR COMMENT':'#1565c0','FOR INFORMATION':'#455a64',
@@ -491,10 +496,11 @@ const DEF_STYLES = {
   stamp:{color:STAMPS['APPROVED'],stamp:'APPROVED',opacity:0.9}, image:{opacity:1}, signature:{}, legend:{fs:10},
   marker:{color:'#ffeb3b',lw:14,opacity:0.4}, hlbox:{color:'#ffeb3b',opacity:0.35}, whiteout:{color:'#ffffff'}, patch:{},
   sym:{color:'#e53935',lw:2,fs:9},
+  pipe:{svc:'lthwf',color:'#d32f2f',lw:3,dash:'solid',fs:8},
   measure:{color:'#6a1b9a',lw:2,fs:10}, run:{color:'#6a1b9a',lw:2,fs:10}, area:{color:'#6a1b9a',lw:2,fs:10,fill:'tint'},
 };
 const DRAG_TOOLS = new Set(['line','arrow','rect','ellipse','cloud','hlbox','whiteout','measure','calibrate','movearea','callout']);
-const CLICK_TOOLS = new Set(['polygon','run','area']);
+const CLICK_TOOLS = new Set(['polygon','run','area','pipe']);
 const FREE_TOOLS = new Set(['pen','marker']);
 const toolType = t => t === 'movearea' ? 'patch' : t === 'symbols' ? 'sym' : (t === 'select' || t === 'pan' || t === 'calibrate') ? null : t;
 
@@ -550,7 +556,8 @@ function annValue(a, page){
   if (a.type === 'text' || a.type === 'callout' || a.type === 'cloud') return (a.text || '').replace(/\s+/g,' ');
   if (a.type === 'stamp') return a.stamp;
   if (a.sigLabel) return a.sigLabel;
-  if (a.type === 'sym') return a.tag || '';
+  if (a.type === 'sym') return [a.tag, a.style.size].filter(Boolean).join(' · ');
+  if (a.type === 'pipe'){ const sv = SERVICE_BY_ID[a.style.svc]; return [sv && sv.n, a.style.size, a.pts.length > 1 ? fmtLen(polyLen(a.pts), page) : ''].filter(Boolean).join(' · '); }
   return '';
 }
 const legendLabel = c => { const e = settings.legend.find(l => l.c.toLowerCase() === String(c||'').toLowerCase()); return e ? e.label : ''; };
@@ -648,6 +655,10 @@ function symKit(c, col){
     arr: (x1, y1, x2, y2, hs = 0.3) => { K.ln(x1, y1, x2, y2); const a = Math.atan2(y2-y1, x2-x1); poly([[x2,y2],[x2-hs*Math.cos(a-0.45), y2-hs*Math.sin(a-0.45)],[x2-hs*Math.cos(a+0.45), y2-hs*Math.sin(a+0.45)]], true, col); },
     tee: () => K.circ(0, 0, 0.1, col),
     act: label => { K.ln(0, 0, 0, -0.85); K.rect(-0.48, -1.45, 0.96, 0.6); K.txt(label, 0, -1.15, label.length > 1 ? 0.36 : 0.44); },
+    bowAt: (cx, w, h) => { poly([[cx-w,-h],[cx-w,h],[cx,0]]); poly([[cx+w,-h],[cx+w,h],[cx,0]]); },
+    fanBlades: (cx, cy, r) => { [0, 2.1, 4.2].forEach(a0 => { c.beginPath(); c.moveTo(cx, cy); c.quadraticCurveTo(cx + r*Math.cos(a0+0.5), cy + r*Math.sin(a0+0.5), cx + r*Math.cos(a0), cy + r*Math.sin(a0)); c.stroke(); }); K.circ(cx, cy, r*0.18, col); },
+    pumpIn: (cx, cy, r) => { K.circ(cx, cy, r); poly([[cx + r, cy],[cx - r*0.5, cy + r*0.866],[cx - r*0.5, cy - r*0.866]], true, null); },
+    dashed: fn => { c.save(); c.setLineDash([0.18, 0.12]); fn(); c.restore(); },
     bubble: label => { K.tee(); K.ln(0, 0, 0, -0.7); K.circ(0, -1.3, 0.6); if (label) K.txt(label, 0, -1.3, label.length > 1 ? 0.42 : 0.6); },
   };
   return K;
@@ -685,61 +696,154 @@ const SYMS = [
   {id:'expv', g:'Pumps & ancillaries', n:'Expansion vessel', s:'Expansion vessel', k:'pressure vessel', b:[-0.7,-2.25,0.7,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rrect(-0.6,-2.15,1.2,1.65,0.45); K.ln(-0.6,-1.32,0.6,-1.32); }},
   {id:'fm', g:'Pumps & ancillaries', n:'Flow meter', s:'Flow meter', k:'meter', b:[-0.9,-0.6,0.9,0.6], d:K => { K.rect(-0.85,-0.55,1.7,1.1); K.txt('FM',0,0,0.5); }},
   {id:'hm', g:'Pumps & ancillaries', n:'Heat meter', s:'Heat meter', k:'energy meter', b:[-0.9,-0.6,0.9,0.6], d:K => { K.rect(-0.85,-0.55,1.7,1.1); K.txt('HM',0,0,0.5); }},
-  {id:'reducer', g:'Pumps & ancillaries', n:'Reducer', s:'Reducer', k:'concentric reducer', b:[-0.85,-0.65,0.85,0.65], d:K => K.poly([[-0.8,-0.6],[0.8,-0.3],[0.8,0.3],[-0.8,0.6]])},
-  {id:'cap', g:'Pumps & ancillaries', n:'Capped end', s:'Capped end', k:'blank cap end', b:[-0.9,-0.65,0.4,0.65], d:K => { K.ln(-0.9,0,0.2,0); K.ln(0.2,-0.6,0.2,0.6); K.ln(0.34,-0.6,0.34,0.6); }},
-  {id:'dirtsep', g:'Pumps & ancillaries', n:'Dirt separator', s:'Dirt separator', k:'dirt separator magnetic filter air dirt', b:[-1,-1.08,1,1.62], d:K => { K.ln(-1,0,-0.55,0); K.ln(0.55,0,1,0); K.rrect(-0.55,-1.02,1.1,2.04,0.42); K.txt('DS',0,0,0.42); K.ln(0,1.02,0,1.35); K.ln(-0.25,1.35,0.25,1.35); K.ln(-0.25,1.48,0.25,1.48); }},
+  {id:'reducer', g:'Pipework', n:'Reducer', s:'Reducer', k:'concentric reducer', b:[-0.85,-0.65,0.85,0.65], d:K => K.poly([[-0.8,-0.6],[0.8,-0.3],[0.8,0.3],[-0.8,0.6]])},
+  {id:'cap', g:'Pipework', n:'Capped end', s:'Capped end', k:'blank cap end', b:[-0.9,-0.65,0.4,0.65], d:K => { K.ln(-0.9,0,0.2,0); K.ln(0.2,-0.6,0.2,0.6); K.ln(0.34,-0.6,0.34,0.6); }},
+  {id:'dirtsep', g:'Water treatment', n:'Dirt separator', s:'Dirt separator', k:'dirt separator magnetic filter air dirt', b:[-1,-1.08,1,1.62], d:K => { K.ln(-1,0,-0.55,0); K.ln(0.55,0,1,0); K.rrect(-0.55,-1.02,1.1,2.04,0.42); K.txt('DS',0,0,0.42); K.ln(0,1.02,0,1.35); K.ln(-0.25,1.35,0.25,1.35); K.ln(-0.25,1.48,0.25,1.48); }},
   {id:'bypass', g:'Pumps & ancillaries', n:'Bypass valve (with bypass loop)', s:'Bypass valve', k:'bypass automatic abv pressure', b:[-1.35,-1.62,1.35,0.12], d:K => { K.tee(); K.ln(-1.2,0,1.2,0); K.circ(-1.2,0,0.08,K.col); K.circ(1.2,0,0.08,K.col); K.poly([[-1.2,0],[-1.2,-1.1],[-0.55,-1.1]], false, null); K.poly([[0.55,-1.1],[1.2,-1.1],[1.2,0]], false, null); K.poly([[-0.55,-1.45],[-0.55,-0.75],[0,-1.1]]); K.poly([[0.55,-1.45],[0.55,-0.75],[0,-1.1]]); }},
-  {id:'flow', g:'Pumps & ancillaries', n:'Flow direction arrow', s:'Flow arrow', k:'direction', b:[-1,-0.45,1,0.45], d:K => K.arr(-1,0,1,0,0.7)},
+  {id:'flow', g:'Pipework', n:'Flow direction arrow', s:'Flow arrow', k:'direction', b:[-1,-0.45,1,0.45], d:K => K.arr(-1,0,1,0,0.7)},
   // Plant & equipment
   {id:'hx', g:'Plant & equipment', n:'Heat exchanger (shell & tube)', s:'Heat exchanger', k:'calorifier shell tube hx', b:[-1.65,-0.95,1.65,0.95], d:K => { K.ln(-1.65,0,-1.25,0); K.ln(1.25,0,1.65,0); K.rrect(-1.25,-0.85,2.5,1.7,0.45); K.poly([[-1.25,0],[-0.9,-0.55],[-0.5,0.55],[-0.1,-0.55],[0.3,0.55],[0.7,-0.55],[1.0,0.3],[1.25,0]], false, null); }},
   {id:'phe', g:'Plant & equipment', n:'Plate heat exchanger (PHE)', s:'Plate heat exch.', k:'phe plate heat exchanger', b:[-1.4,-1.25,1.4,1.25], d:K => { K.rect(-0.9,-1.15,1.8,2.3); [-0.6,-0.3,0,0.3,0.6].forEach(x => K.ln(x,-1.0,x,1.0)); K.ln(-1.4,-0.8,-0.9,-0.8); K.ln(-1.4,0.8,-0.9,0.8); K.ln(0.9,-0.8,1.4,-0.8); K.ln(0.9,0.8,1.4,0.8); K.ln(-0.9,1.15,0.9,-1.15); }},
-  {id:'ahu', g:'Plant & equipment', n:'Air handling unit (AHU)', s:'AHU', k:'ahu air handling unit', b:[-2.5,-1.55,2.5,1.05], d:K => { K.rect(-2.4,-1,4.8,2); K.ln(-1.2,-1,-1.2,1); K.ln(0,-1,0,1); K.ln(1.2,-1,1.2,1); K.poly([[-2.2,-0.8],[-1.85,0.8],[-1.75,-0.8],[-1.55,0.8],[-1.4,-0.8]], false, null); K.ln(-1.0,0.8,-0.2,-0.8); K.ln(0.2,0.8,1.0,-0.8); K.circ(1.8,0,0.62); K.poly([[2.3,0],[1.55,0.43],[1.55,-0.43]], true, null); K.txt('AHU',0,-1.3,0.4); }},
+  {id:'ahu', g:'Ventilation & air conditioning', n:'Air handling unit (AHU)', s:'AHU', k:'ahu air handling unit', b:[-2.5,-1.55,2.5,1.05], d:K => { K.rect(-2.4,-1,4.8,2); K.ln(-1.2,-1,-1.2,1); K.ln(0,-1,0,1); K.ln(1.2,-1,1.2,1); K.poly([[-2.2,-0.8],[-1.85,0.8],[-1.75,-0.8],[-1.55,0.8],[-1.4,-0.8]], false, null); K.ln(-1.0,0.8,-0.2,-0.8); K.ln(0.2,0.8,1.0,-0.8); K.circ(1.8,0,0.62); K.poly([[2.3,0],[1.55,0.43],[1.55,-0.43]], true, null); K.txt('AHU',0,-1.3,0.4); }},
   {id:'chiller', g:'Plant & equipment', n:'Chiller', s:'Chiller', k:'chiller cooling plant', b:[-1.55,-1.05,1.55,1.05], d:K => { K.rect(-1.45,-0.95,2.9,1.9); K.txt('CHILLER',0,-0.3,0.42); K.ln(-0.5,0.35,0.5,0.35); [[-0.3,0.15,0.3,0.55],[-0.3,0.55,0.3,0.15],[0,0.1,0,0.6]].forEach(l => K.ln(...l)); }},
   {id:'boiler', g:'Plant & equipment', n:'Boiler', s:'Boiler', k:'boiler heating plant gas', b:[-1.05,-1.75,1.05,1.35], d:K => { K.rect(-0.95,-1.25,1.9,2.5); K.ln(0,-1.25,0,-1.7); K.ln(-0.2,-1.7,0.2,-1.7); K.txt('BOILER',0,0.85,0.34); const c = K.c; c.beginPath(); c.moveTo(0,0.4); c.bezierCurveTo(-0.55,0.3,-0.45,-0.25,-0.1,-0.75); c.bezierCurveTo(-0.05,-0.35,0.25,-0.35,0.2,-0.6); c.bezierCurveTo(0.55,-0.2,0.5,0.3,0,0.4); c.closePath(); c.fillStyle = K.col; c.fill(); }},
   {id:'chp', g:'Plant & equipment', n:'Combined heat & power (CHP)', s:'CHP', k:'chp combined heat power generator', b:[-1.55,-1.05,1.55,1.05], d:K => { K.rect(-1.45,-0.95,2.9,1.9); K.txt('CHP',-0.45,0,0.55); K.circ(0.8,0,0.45); K.txt('G',0.8,0,0.45); }},
   {id:'ashp', g:'Plant & equipment', n:'Air source heat pump (ASHP)', s:'Air source HP', k:'ashp air source heat pump', b:[-1.55,-1.05,1.55,1.05], d:K => { K.rect(-1.45,-0.95,2.9,1.9); K.circ(-0.55,0,0.65); K.circ(-0.55,0,0.12,K.col); [0,2.1,4.2].forEach(a0 => { const c = K.c; c.beginPath(); c.moveTo(-0.55,0); c.quadraticCurveTo(-0.55+0.55*Math.cos(a0+0.5), 0.55*Math.sin(a0+0.5), -0.55+0.55*Math.cos(a0), 0.55*Math.sin(a0)); c.stroke(); }); K.txt('ASHP',0.75,0,0.36); }},
-  {id:'fcu', g:'Plant & equipment', n:'Fan coil unit (FCU)', s:'Fan coil unit', k:'fcu fan coil unit terminal', b:[-1.75,-1.05,1.75,1.05], d:K => { K.rect(-1.65,-0.95,3.3,1.9); K.ln(-0.15,-0.95,-0.15,0.95); K.ln(-1.35,0.75,-0.45,-0.75); K.ln(-1.05,0.75,-0.75,0.25); K.circ(0.75,0,0.6); K.poly([[1.25,0],[0.5,0.42],[0.5,-0.42]], true, null); K.txt('FCU',-0.5,0.62,0.3); }},
-  {id:'vav', g:'Plant & equipment', n:'VAV box (variable air volume)', s:'VAV box', k:'vav variable air volume terminal damper', b:[-1.75,-1.6,1.75,0.85], d:K => { K.poly([[-1.75,-0.4],[-1.2,-0.4],[-1.2,-0.75],[1.2,-0.75],[1.2,0.75],[-1.2,0.75],[-1.2,0.4],[-1.75,0.4]], false, null); K.ln(-1.75,-0.4,-1.75,0.4); K.ln(1.2,-0.75,1.75,-0.75); K.ln(1.2,0.75,1.75,0.75); K.ln(-0.75,0.5,-0.15,-0.5); K.circ(-0.45,0,0.08,K.col); K.ln(-0.45,-0.75,-0.45,-1.0); K.rect(-0.85,-1.5,0.8,0.5); K.txt('M',-0.45,-1.25,0.36); K.txt('VAV',0.6,0,0.42); }},
+  {id:'fcu', g:'Heat emitters & terminals', n:'Fan coil unit (FCU)', s:'Fan coil unit', k:'fcu fan coil unit terminal', b:[-1.75,-1.05,1.75,1.05], d:K => { K.rect(-1.65,-0.95,3.3,1.9); K.ln(-0.15,-0.95,-0.15,0.95); K.ln(-1.35,0.75,-0.45,-0.75); K.ln(-1.05,0.75,-0.75,0.25); K.circ(0.75,0,0.6); K.poly([[1.25,0],[0.5,0.42],[0.5,-0.42]], true, null); K.txt('FCU',-0.5,0.62,0.3); }},
+  {id:'vav', g:'Ventilation & air conditioning', n:'VAV box (variable air volume)', s:'VAV box', k:'vav variable air volume terminal damper', b:[-1.75,-1.6,1.75,0.85], d:K => { K.poly([[-1.75,-0.4],[-1.2,-0.4],[-1.2,-0.75],[1.2,-0.75],[1.2,0.75],[-1.2,0.75],[-1.2,0.4],[-1.75,0.4]], false, null); K.ln(-1.75,-0.4,-1.75,0.4); K.ln(1.2,-0.75,1.75,-0.75); K.ln(1.2,0.75,1.75,0.75); K.ln(-0.75,0.5,-0.15,-0.5); K.circ(-0.45,0,0.08,K.col); K.ln(-0.45,-0.75,-0.45,-1.0); K.rect(-0.85,-1.5,0.8,0.5); K.txt('M',-0.45,-1.25,0.36); K.txt('VAV',0.6,0,0.42); }},
   {id:'ct', g:'Plant & equipment', n:'Cooling tower', s:'Cooling tower', k:'cooling tower evaporative heat rejection', b:[-1.4,-1.75,1.4,1.3], d:K => { K.poly([[-1.0,-1.0],[1.0,-1.0],[1.3,1.2],[-1.3,1.2]]); K.circ(0,-1.38,0.32); K.ln(-0.32,-1.38,0.32,-1.38); K.ln(0,-1.7,0,-1.06); [-0.6,-0.2,0.2,0.6].forEach(x => K.ln(x,-0.45,x+0.1,-0.25)); K.poly([[-1.1,0.35],[-0.7,0.6],[-0.3,0.35],[0.1,0.6],[0.5,0.35],[0.9,0.6],[1.15,0.4]], false, null); K.txt('CT',0,0.95,0.34); }},
-  {id:'rad', g:'Plant & equipment', n:'Radiator', s:'Radiator', k:'radiator panel heater emitter', b:[-1.4,-1.72,1.4,0.12], d:K => { K.rect(-1.3,-1.62,2.6,1.2); [-0.85,-0.45,-0.05,0.35,0.75].forEach(x => K.ln(x+0.1,-1.48,x+0.1,-0.56)); K.ln(-1.0,0,-1.0,-0.42); K.ln(1.0,0,1.0,-0.42); K.circ(-1.0,0,0.08,K.col); K.circ(1.0,0,0.08,K.col); }},
-  {id:'ufh', g:'Plant & equipment', n:'Underfloor heating manifold', s:'UFH manifold', k:'ufh underfloor heating manifold', b:[-1.65,-0.85,1.5,1.9], d:K => { K.rect(-1.2,-0.75,2.6,0.32); K.rect(-1.2,-0.2,2.6,0.32); K.ln(-1.65,-0.59,-1.2,-0.59); K.ln(-1.65,-0.04,-1.2,-0.04); [-0.8,-0.15,0.5,1.15].forEach(x => { K.ln(x,0.12,x,0.45); K.poly([[x-0.12,0.45],[x-0.12,1.25],[x+0.12,1.25],[x+0.12,0.6]], false, null); }); K.txt('UFH',0.1,1.6,0.34); }},
+  {id:'rad', g:'Heat emitters & terminals', n:'Radiator', s:'Radiator', k:'radiator panel heater emitter', b:[-1.4,-1.72,1.4,0.12], d:K => { K.rect(-1.3,-1.62,2.6,1.2); [-0.85,-0.45,-0.05,0.35,0.75].forEach(x => K.ln(x+0.1,-1.48,x+0.1,-0.56)); K.ln(-1.0,0,-1.0,-0.42); K.ln(1.0,0,1.0,-0.42); K.circ(-1.0,0,0.08,K.col); K.circ(1.0,0,0.08,K.col); }},
+  {id:'ufh', g:'Heat emitters & terminals', n:'Underfloor heating manifold', s:'UFH manifold', k:'ufh underfloor heating manifold', b:[-1.65,-0.85,1.5,1.9], d:K => { K.rect(-1.2,-0.75,2.6,0.32); K.rect(-1.2,-0.2,2.6,0.32); K.ln(-1.65,-0.59,-1.2,-0.59); K.ln(-1.65,-0.04,-1.2,-0.04); [-0.8,-0.15,0.5,1.15].forEach(x => { K.ln(x,0.12,x,0.45); K.poly([[x-0.12,0.45],[x-0.12,1.25],[x+0.12,1.25],[x+0.12,0.6]], false, null); }); K.txt('UFH',0.1,1.6,0.34); }},
   {id:'buffer', g:'Plant & equipment', n:'Buffer vessel', s:'Buffer vessel', k:'buffer vessel thermal store tank', b:[-1.2,-1.75,1.2,1.75], d:K => { K.rrect(-0.75,-1.65,1.5,3.3,0.6); [-1.0,1.0].forEach(y => { K.ln(-1.2,y,-0.75,y); K.ln(0.75,y,1.2,y); }); K.txt('BV',0,0,0.5); }},
   {id:'presu', g:'Plant & equipment', n:'Pressurisation unit', s:'Pressurisation unit', k:'pressurisation unit sealed system fill', b:[-1.2,-2.4,1.2,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-1.1,-2.3,2.2,1.8); K.circ(-0.45,-1.55,0.38); K.poly([[-0.07,-1.55],[-0.64,-1.22],[-0.64,-1.88]], true, null); K.txt('PU',-0.45,-0.83,0.3); K.rrect(0.2,-2.1,0.65,1.4,0.3); K.ln(0.2,-1.4,0.85,-1.4); }},
   {id:'softener', g:'Plant & equipment', n:'Water softener', s:'Water softener', k:'water softener treatment cold water', b:[-1.1,-1.5,1.1,1.1], d:K => { K.ln(-1.1,0,-0.6,0); K.ln(0.6,0,1.1,0); K.rrect(-0.6,-1.4,1.2,2.4,0.45); K.txt('WS',0,-0.15,0.45); K.ln(-0.35,0.6,0.35,0.6); }},
   // Sensors & instruments
-  {id:'tp', g:'Sensors & instruments', n:'Test point', s:'Test point', k:'binder pressure temperature tapping', b:[-0.35,-1.15,0.35,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.circ(0,-0.8,0.3); K.circ(0,-0.8,0.1,K.col); }},
-  {id:'tsens', g:'Sensors & instruments', n:'Temperature sensor', s:'Temp. sensor', k:'temperature sensor bms', b:BUBBLE_B, d:K => K.bubble('T')},
-  {id:'psens', g:'Sensors & instruments', n:'Pressure sensor', s:'Pressure sensor', k:'pressure transducer', b:BUBBLE_B, d:K => K.bubble('P')},
-  {id:'pswitch', g:'Sensors & instruments', n:'Pressure switch', s:'Pressure switch', k:'pressure switch', b:BUBBLE_B, d:K => K.bubble('PS')},
-  {id:'dps', g:'Sensors & instruments', n:'Differential pressure sensor / switch', s:'Diff. pressure', k:'dp differential pressure', b:BUBBLE_B, d:K => K.bubble('ΔP')},
-  {id:'fswitch', g:'Sensors & instruments', n:'Flow switch', s:'Flow switch', k:'flow switch', b:BUBBLE_B, d:K => K.bubble('FS')},
-  {id:'gauge', g:'Sensors & instruments', n:'Pressure gauge', s:'Pressure gauge', k:'gauge manometer', b:BUBBLE_B, d:K => { K.bubble(''); K.ln(0,-1.3,0.36,-1.62); K.circ(0,-1.3,0.08,K.col); }},
-  {id:'therm', g:'Sensors & instruments', n:'Thermometer', s:'Thermometer', k:'temperature gauge', b:[-0.4,-1.95,0.4,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.35); K.rrect(-0.16,-1.9,0.32,1.5,0.16); K.circ(0,-0.55,0.24,K.col); K.ln(0,-0.75,0,-1.6); }},
+  {id:'tp', g:'Sensors & controls', n:'Test point', s:'Test point', k:'binder pressure temperature tapping', b:[-0.35,-1.15,0.35,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.circ(0,-0.8,0.3); K.circ(0,-0.8,0.1,K.col); }},
+  {id:'tsens', g:'Sensors & controls', n:'Temperature sensor', s:'Temp. sensor', k:'temperature sensor bms', b:BUBBLE_B, d:K => K.bubble('T')},
+  {id:'psens', g:'Sensors & controls', n:'Pressure sensor', s:'Pressure sensor', k:'pressure transducer', b:BUBBLE_B, d:K => K.bubble('P')},
+  {id:'pswitch', g:'Sensors & controls', n:'Pressure switch', s:'Pressure switch', k:'pressure switch', b:BUBBLE_B, d:K => K.bubble('PS')},
+  {id:'dps', g:'Sensors & controls', n:'Differential pressure sensor / switch', s:'Diff. pressure', k:'dp differential pressure', b:BUBBLE_B, d:K => K.bubble('ΔP')},
+  {id:'fswitch', g:'Sensors & controls', n:'Flow switch', s:'Flow switch', k:'flow switch', b:BUBBLE_B, d:K => K.bubble('FS')},
+  {id:'gauge', g:'Sensors & controls', n:'Pressure gauge', s:'Pressure gauge', k:'gauge manometer', b:BUBBLE_B, d:K => { K.bubble(''); K.ln(0,-1.3,0.36,-1.62); K.circ(0,-1.3,0.08,K.col); }},
+  {id:'therm', g:'Sensors & controls', n:'Thermometer', s:'Thermometer', k:'temperature gauge', b:[-0.4,-1.95,0.4,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.35); K.rrect(-0.16,-1.9,0.32,1.5,0.16); K.circ(0,-0.55,0.24,K.col); K.ln(0,-0.75,0,-1.6); }},
+
+  // Valves (more)
+  {id:'tmv', g:'Valves', n:'Thermostatic mixing valve (TMV)', s:'TMV', k:'tmv thermostatic mixing blending', b:[-1,-1.55,1,1.6], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.ln(0,0,0,-0.7); K.circ(0,-1.1,0.4); K.txt('T',0,-1.1,0.45); K.txt('TMV',0,1.35,0.3); }},
+  {id:'dcv', g:'Valves', n:'Double check valve', s:'Double check', k:'dcv double check backflow wras', b:[-1.2,-1.05,1.2,1.15], d:K => { K.bowAt(-0.6,0.55,0.45); K.bowAt(0.6,0.55,0.45); K.arr(-0.9,-0.8,0.9,-0.8,0.26); K.txt('DCV',0,0.85,0.32); }},
+  {id:'solenoid', g:'Valves', n:'Solenoid valve', s:'Solenoid valve', k:'solenoid valve electric', b:[-1,-1.42,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.75); K.rect(-0.42,-1.35,0.84,0.6); K.txt('S',0,-1.05,0.42); }},
+  {id:'float', g:'Valves', n:'Float valve', s:'Float valve', k:'float valve ball cock tank inlet', b:[-1,-1.35,2.1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.5); K.ln(0,-0.5,1.5,-0.95); K.circ(1.75,-1.0,0.3); }},
+  {id:'flushbyp', g:'Valves', n:'Flushing bypass (pre-commission cleaning)', s:'Flushing bypass', k:'flushing bypass cleaning temporary', b:[-1.35,-2.0,1.35,0.12], d:K => { K.ln(-1.2,0,1.2,0); K.circ(-1.2,0,0.08,K.col); K.circ(1.2,0,0.08,K.col); K.dashed(() => { K.poly([[-1.2,0],[-1.2,-1.1],[-0.55,-1.1]], false, null); K.poly([[0.55,-1.1],[1.2,-1.1],[1.2,0]], false, null); }); K.bowAt(0,0.55,0.35); K.c.save(); K.c.translate(0,-1.1); K.bowAt(0,0.55,0.35); K.c.restore(); K.txt('FLUSHING',0,-1.75,0.28); }},
+  // Water treatment
+  {id:'airsep', g:'Water treatment', n:'Air separator', s:'Air separator', k:'air separator deaerator vent', b:[-1.1,-1.85,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.0,0.4); K.txt('AS',0,-0.1,0.4); K.arr(0,-1.1,0,-1.8,0.25); }},
+  {id:'airdirt', g:'Water treatment', n:'Air & dirt separator (combined)', s:'Air & dirt sep.', k:'air dirt separator combined', b:[-1.1,-1.85,1.1,1.55], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.2,0.4); K.txt('ADS',0,0,0.32); K.arr(0,-1.1,0,-1.8,0.25); K.ln(0,1.1,0,1.4); K.ln(-0.25,1.4,0.25,1.4); }},
+  {id:'llh', g:'Water treatment', n:'Low loss header / hydraulic separator', s:'Low loss header', k:'llh low loss header hydraulic separator', b:[-1.2,-2.4,1.2,2.2], d:K => { K.rect(-0.45,-1.8,0.9,3.6); [-1.1,1.1].forEach(y => { K.ln(-1.2,y,-0.45,y); K.ln(0.45,y,1.2,y); }); K.txt('LLH',0,0,0.28); K.arr(0,-1.8,0,-2.35,0.22); K.ln(0,1.8,0,2.1); K.ln(-0.2,2.1,0.2,2.1); }},
+  {id:'magfilter', g:'Water treatment', n:'Magnetic filter', s:'Magnetic filter', k:'magnetic filter magnetite', b:[-1.1,-1.0,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-0.9,1.1,1.8,0.35); K.txt('MF',0,0,0.42); }},
+  {id:'sidestream', g:'Water treatment', n:'Side-stream filter', s:'Side-stream filter', k:'side stream filter', b:[-1.25,-1.65,1.25,0.12], d:K => { K.ln(-1.25,0,1.25,0); K.circ(-0.9,0,0.08,K.col); K.circ(0.9,0,0.08,K.col); K.poly([[-0.9,0],[-0.9,-1.2],[-0.45,-1.2]], false, null); K.poly([[0.45,-1.2],[0.9,-1.2],[0.9,0]], false, null); K.rect(-0.45,-1.55,0.9,0.7); K.txt('SSF',0,-1.2,0.28); }},
+  {id:'degasser', g:'Water treatment', n:'Vacuum degasser', s:'Vacuum degasser', k:'vacuum degasser deaeration', b:[-0.9,-2.0,0.9,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-0.8,-1.9,1.6,1.4); K.txt('VD',0,-1.2,0.45); }},
+  {id:'dosing', g:'Water treatment', n:'Dosing pot', s:'Dosing pot', k:'dosing pot chemical inhibitor', b:[-1.25,-2.6,1.25,0.12], d:K => { K.ln(-1.25,0,1.25,0); K.circ(-0.6,0,0.08,K.col); K.circ(0.6,0,0.08,K.col); K.ln(-0.6,0,-0.6,-0.55); K.ln(0.6,0,0.6,-0.55); K.rrect(-0.75,-2.15,1.5,1.6,0.3); K.poly([[-0.3,-2.15],[-0.45,-2.5],[0.45,-2.5],[0.3,-2.15]]); K.txt('DP',0,-1.35,0.42); }},
+  // Plant (more)
+  {id:'cylinder', g:'Plant & equipment', n:'Hot water cylinder / calorifier', s:'HW cylinder', k:'hot water cylinder calorifier unvented storage', b:[-0.9,-1.9,0.9,1.9], d:K => { K.rrect(-0.8,-1.8,1.6,3.6,0.6); K.poly([[-0.8,0.5],[-0.45,0.95],[-0.1,0.5],[0.25,0.95],[0.55,0.5],[0.8,0.75]], false, null); K.txt('HWC',0,-0.6,0.4); }},
+  {id:'hiu', g:'Plant & equipment', n:'Heat interface unit (HIU)', s:'HIU', k:'hiu heat interface unit district heating flats', b:[-1.4,-1.1,1.4,1.1], d:K => { K.rect(-1.3,-1.0,2.6,2.0); [-0.95,-0.75,-0.55,-0.35].forEach(x => K.ln(x,-0.6,x,0.6)); K.rect(-1.05,-0.7,0.8,1.4,null); K.txt('HIU',0.5,0,0.45); }},
+  {id:'cwst', g:'Plant & equipment', n:'Cold water storage tank', s:'CW storage tank', k:'cold water storage tank cistern', b:[-1.5,-1.1,1.5,1.1], d:K => { K.poly([[-1.4,-1.0],[-1.4,1.0],[1.4,1.0],[1.4,-1.0]], false, '#fff'); K.dashed(() => K.ln(-1.4,-0.4,1.4,-0.4)); K.poly([[0.9,-0.75],[1.1,-0.75],[1.0,-0.5]], true, K.col); K.txt('CWST',0,0.35,0.4); }},
+  {id:'booster', g:'Plant & equipment', n:'Booster set', s:'Booster set', k:'booster set pump cold water', b:[-1.6,-1.1,1.6,1.1], d:K => { K.rect(-1.5,-1.0,3.0,2.0); K.pumpIn(-0.65,0.15,0.48); K.pumpIn(0.65,0.15,0.48); K.txt('BOOSTER',0,-0.7,0.26); }},
+  {id:'gshp', g:'Plant & equipment', n:'Ground source heat pump (GSHP)', s:'Ground source HP', k:'gshp ground source heat pump', b:[-1.55,-1.2,1.55,1.2], d:K => { K.rect(-1.45,-1.1,2.9,1.5); K.txt('GSHP',0,-0.35,0.42); K.ln(-1.45,0.75,1.45,0.75); for (let x = -1.3; x < 1.4; x += 0.35) K.ln(x,0.75,x-0.25,1.1); }},
+  {id:'solar', g:'Plant & equipment', n:'Solar thermal panel', s:'Solar thermal', k:'solar thermal collector panel', b:[-1.45,-1.65,1.6,0.7], d:K => { K.poly([[-1.4,0.6],[-0.8,-0.9],[1.4,-0.9],[0.8,0.6]]); [0.25,0.5,0.75].forEach(t => K.ln(-1.4+t*2.2,0.6,-0.8+t*2.2,-0.9)); K.ln(-1.1,-0.15,1.1,-0.15); K.circ(1.25,-1.35,0.22,K.col); }},
+  {id:'immersion', g:'Plant & equipment', n:'Immersion heater', s:'Immersion heater', k:'immersion heater electric element', b:[-1.1,-0.7,1.1,0.7], d:K => { K.rect(-1.0,-0.6,2.0,1.2); K.poly([[-0.8,0],[-0.6,-0.35],[-0.3,0.35],[0,-0.35],[0.3,0.35],[0.6,-0.35],[0.8,0]], false, null); }},
+  // Heat emitters & terminals (more)
+  {id:'fanconv', g:'Heat emitters & terminals', n:'Fan convector', s:'Fan convector', k:'fan convector heater', b:[-1.5,-0.9,1.5,0.9], d:K => { K.rect(-1.4,-0.8,2.8,1.6); K.pumpIn(-0.6,0,0.45); K.txt('FCV',0.6,0,0.38); }},
+  {id:'trench', g:'Heat emitters & terminals', n:'Trench heater', s:'Trench heater', k:'trench heater perimeter', b:[-1.7,-0.55,1.7,0.55], d:K => { K.rect(-1.6,-0.45,3.2,0.9); for (let x = -1.4; x <= 1.41; x += 0.25) K.ln(x,-0.3,x,0.3); }},
+  {id:'beam', g:'Heat emitters & terminals', n:'Chilled beam', s:'Chilled beam', k:'chilled beam active passive', b:[-1.7,-0.5,1.7,1.05], d:K => { K.rect(-1.6,-0.4,3.2,0.8); K.txt('CB',0,0,0.4); K.arr(-1.0,0.4,-1.25,1.0,0.22); K.arr(1.0,0.4,1.25,1.0,0.22); }},
+  // Ventilation & air conditioning (more)
+  {id:'fan', g:'Ventilation & air conditioning', n:'Fan (supply / extract)', s:'Fan', k:'fan supply extract', b:[-0.95,-0.95,0.95,0.95], d:K => { K.circ(0,0,0.9); K.fanBlades(0,0,0.75); }},
+  {id:'mvhr', g:'Ventilation & air conditioning', n:'MVHR unit', s:'MVHR', k:'mvhr heat recovery ventilation', b:[-1.5,-1.0,1.5,1.5], d:K => { K.rect(-1.4,-0.9,2.8,1.8); K.rect(-0.5,-0.6,1.0,1.2,null); K.ln(-0.5,-0.6,0.5,0.6); K.ln(-0.5,0.6,0.5,-0.6); K.txt('MVHR',0,1.2,0.34); }},
+  {id:'vrfin', g:'Ventilation & air conditioning', n:'VRF / split indoor unit', s:'Indoor unit', k:'vrf split indoor unit air conditioning', b:[-1.6,-0.65,1.6,0.65], d:K => { K.rect(-1.5,-0.55,3.0,1.1); K.ln(-1.2,0.22,1.2,0.22); K.ln(-1.2,0.36,1.2,0.36); K.txt('IU',0,-0.15,0.4); }},
+  {id:'vrfout', g:'Ventilation & air conditioning', n:'VRF / split outdoor unit', s:'Outdoor unit', k:'vrf split outdoor condensing unit', b:[-1.3,-1.1,1.3,1.1], d:K => { K.rect(-1.2,-1.0,2.4,2.0); K.circ(-0.3,0,0.65); K.fanBlades(-0.3,0,0.55); K.txt('ODU',0.78,0,0.28); }},
+  // Sensors & controls (more)
+  {id:'roomsens', g:'Sensors & controls', n:'Room temperature sensor', s:'Room sensor', k:'room temperature sensor wall', b:[-0.65,-0.65,0.65,0.65], d:K => { K.rect(-0.6,-0.6,1.2,1.2); K.txt('T',0,0,0.6); }},
+  {id:'oas', g:'Sensors & controls', n:'Outside air temperature sensor', s:'Outside air sensor', k:'outside air temperature sensor weather compensation', b:[-0.65,-0.65,0.65,0.65], d:K => { K.rect(-0.6,-0.6,1.2,1.2); K.txt('OA',0,0,0.45); }},
+  {id:'frost', g:'Sensors & controls', n:'Frost thermostat', s:'Frost stat', k:'frost thermostat protection', b:BUBBLE_B, d:K => K.bubble('FT')},
+  {id:'bms', g:'Sensors & controls', n:'BMS controller / outstation', s:'BMS controller', k:'bms controller outstation panel', b:[-1.3,-0.8,1.3,0.8], d:K => { K.rect(-1.2,-0.7,2.4,1.4); K.txt('BMS',0,0,0.55); }},
+  // Pipework
+  {id:'rise', g:'Pipework', n:'Pipe rise (up)', s:'Rise', k:'rise riser up', b:[-0.5,-0.7,0.9,0.5], d:K => { K.circ(0,0,0.45); K.circ(0,0,0.13,K.col); K.arr(0.72,0.4,0.72,-0.65,0.22); }},
+  {id:'drop', g:'Pipework', n:'Pipe drop (down)', s:'Drop', k:'drop down', b:[-0.5,-0.5,0.9,0.7], d:K => { K.circ(0,0,0.45); K.ln(-0.32,-0.32,0.32,0.32); K.ln(-0.32,0.32,0.32,-0.32); K.arr(0.72,-0.4,0.72,0.65,0.22); }},
+  {id:'connex', g:'Pipework', n:'Connect to existing', s:'Connect to existing', k:'connect existing', b:[-1.2,-1.15,0.95,0.25], d:K => { K.ln(-1.2,0,-0.1,0); K.circ(0,0,0.18,K.col); K.txt('CONNECT TO',-0.1,-0.92,0.26); K.txt('EXISTING',-0.1,-0.6,0.26); }},
+  {id:'pbreak', g:'Pipework', n:'Pipe break', s:'Pipe break', k:'break', b:[-1.2,-0.5,1.2,0.5], d:K => { K.ln(-1.2,0,-0.3,0); K.ln(0.3,0,1.2,0); K.ln(-0.45,0.45,-0.15,-0.45); K.ln(0.15,0.45,0.45,-0.45); }},
+  {id:'cont', g:'Pipework', n:'Continuation arrow', s:'Continuation', k:'continuation continued', b:[-1,-0.8,1.05,0.45], d:K => { K.ln(-1,0,0.45,0); K.poly([[0.4,-0.4],[1,0],[0.4,0.4]], true, null); K.txt('CONT.',-0.3,-0.48,0.3); }},
+  {id:'anchor', g:'Pipework', n:'Pipe anchor', s:'Anchor', k:'anchor fixed point', b:[-1,-0.5,1,0.5], d:K => { K.ln(-1,0,1,0); K.ln(-0.4,-0.4,0.4,0.4); K.ln(-0.4,0.4,0.4,-0.4); }},
+  {id:'guide', g:'Pipework', n:'Pipe guide', s:'Guide', k:'guide', b:[-1,-0.55,1,0.55], d:K => { K.ln(-1,0,1,0); K.ln(-0.4,-0.32,0.4,-0.32); K.ln(-0.4,0.32,0.4,0.32); [-0.4,0.4].forEach(x => { K.ln(x,-0.32,x,-0.5); K.ln(x,0.32,x,0.5); }); }},
+  {id:'bellows', g:'Pipework', n:'Expansion bellows', s:'Expansion bellows', k:'expansion bellows compensator', b:[-1.2,-0.55,1.2,0.55], d:K => { K.ln(-1.2,0,-0.6,0); K.ln(0.6,0,1.2,0); K.rect(-0.6,-0.45,1.2,0.9); [-0.3,0,0.3].forEach(x => K.ln(x,-0.45,x,0.45)); }},
 ];
 const SYM_BY_ID = Object.fromEntries(SYMS.map(x => [x.id, x]));
+const SYM_GROUPS = ['Valves','Control valves','Pumps & ancillaries','Water treatment','Plant & equipment','Heat emitters & terminals','Ventilation & air conditioning','Sensors & controls','Pipework'];
+/* Tag prefixes used when tags are numbered automatically (IV1, IV2, P1…). */
+const SYM_PREFIX = {iso:'IV', ball:'BLV', bfly:'BFV', globe:'GV', nrv:'NRV', drv:'DRV', comm:'CS', drainv:'DV', tundish:'TD', drain:'DC', relief:'SV', lock:'LS', prv:'PRV', trv:'TRV', tmv:'TMV', dcv:'DCV', solenoid:'SOV', float:'FV', flushbyp:'FB',
+  cv2:'CV', mix3:'CV', div3:'CV', zone:'ZV', picv:'PICV', dpcv:'DPCV',
+  pump:'P', pump2:'P', strainer:'ST', bypass:'BPV', aav:'AAV', expv:'EV', fm:'FM', hm:'HM',
+  dirtsep:'DS', airsep:'AS', airdirt:'ADS', llh:'LLH', magfilter:'MF', sidestream:'SSF', degasser:'VD', dosing:'DOS',
+  hx:'HX', phe:'PHE', chiller:'CH', ct:'CT', boiler:'B', chp:'CHP', ashp:'ASHP', buffer:'BUF', presu:'PU', softener:'WS', cylinder:'HWC', hiu:'HIU', cwst:'CWST', booster:'BS', gshp:'GSHP', solar:'STP', immersion:'IH',
+  rad:'RAD', ufh:'UFH', fcu:'FCU', fanconv:'FCV', trench:'TH', beam:'CB', ahu:'AHU', vav:'VAV', fan:'F', mvhr:'MVHR', vrfin:'IU', vrfout:'ODU',
+  tp:'TP', tsens:'TS', psens:'PT', pswitch:'PS', dps:'DPS', fswitch:'FS', gauge:'PG', therm:'TG', roomsens:'RTS', oas:'OAT', frost:'FST', bms:'OS'};
+function nextTag(prefix){
+  let mx = 0; const re = new RegExp('^' + prefix + '(\\d+)$');
+  S.doc.pages.forEach(p => p.anns.forEach(a => { if (a.type === 'sym' && a.tag){ const m = re.exec(a.tag); if (m) mx = Math.max(mx, +m[1]); } }));
+  return prefix + (mx + 1);
+}
+/* Pipe services for the Pipe tool: colour, line style and label. */
+const SERVICES = [
+  {id:'lthwf', n:'LTHW flow', c:'#d32f2f', dash:'solid', lbl:'LTHW F'},
+  {id:'lthwr', n:'LTHW return', c:'#d32f2f', dash:'dashed', lbl:'LTHW R'},
+  {id:'chwf', n:'CHW flow', c:'#1565c0', dash:'solid', lbl:'CHW F'},
+  {id:'chwr', n:'CHW return', c:'#1565c0', dash:'dashed', lbl:'CHW R'},
+  {id:'cws', n:'Cold water service (CWS)', c:'#00838f', dash:'solid', lbl:'CWS'},
+  {id:'mcws', n:'Mains cold water (MCWS)', c:'#2e7d32', dash:'solid', lbl:'MCWS'},
+  {id:'hws', n:'Hot water service (HWS)', c:'#ef6c00', dash:'solid', lbl:'HWS'},
+  {id:'hwsr', n:'HWS return', c:'#ef6c00', dash:'dashed', lbl:'HWSR'},
+  {id:'cond', n:'Condensate', c:'#6d4c41', dash:'dotted', lbl:'COND'},
+  {id:'gas', n:'Gas', c:'#f9a825', dash:'solid', lbl:'GAS'},
+  {id:'refrig', n:'Refrigerant', c:'#8e24aa', dash:'solid', lbl:'REF'},
+  {id:'other', n:'Other (no label)', c:'#000000', dash:'solid', lbl:''},
+];
+const SERVICE_BY_ID = Object.fromEntries(SERVICES.map(x => [x.id, x]));
 function symScaleOrigin(a){ const def = SYM_BY_ID[a.sym], [x,y,w] = box(a.pts), [x0,y0,x1] = def ? def.b : [0,0,1]; const k = w/(x1-x0 || 1); return {k, o:[x - x0*k, y - y0*k]}; }
 /* Valve & component schedule: a table drawn on the page that lists every
    HVAC symbol on that page (symbol, description, quantity, tags). It is
    anchored by its top-right corner and rebuilds itself on every redraw. */
 function scheduleRows(page){
-  const by = {};
+  const by = {}, order = [];
   for (const a of page.anns) if (a.type === 'sym' && SYM_BY_ID[a.sym]){
-    const r = by[a.sym] || (by[a.sym] = {def:SYM_BY_ID[a.sym], n:0, tags:[], color:a.style.color});
-    r.n++; if (a.tag) r.tags.push(a.tag);
+    const size = (a.style.size || '').trim(), key = a.sym + '|' + size;
+    if (!by[key]){ by[key] = {def:SYM_BY_ID[a.sym], size, n:0, tags:[], color:a.style.color}; order.push(key); }
+    by[key].n++; if (a.tag) by[key].tags.push(a.tag);
   }
-  return SYMS.filter(d => by[d.id]).map(d => by[d.id]);
+  const idx = id => SYMS.findIndex(d => d.id === id);
+  return order.sort((p, q) => idx(by[p].def.id) - idx(by[q].def.id) || by[p].size.localeCompare(by[q].size, 'en', {numeric:true})).map(k => by[k]);
+}
+/* "IV1, IV2, IV3, IV7" -> "IV1–IV3, IV7" */
+function compressTags(tags){
+  const groups = {}, other = [];
+  [...new Set(tags)].forEach(t => { const m = /^(.*?)(\d+)$/.exec(t); if (m) (groups[m[1]] = groups[m[1]] || []).push(+m[2]); else other.push(t); });
+  const out = [];
+  Object.keys(groups).forEach(pre => {
+    const ns = groups[pre].sort((x, y) => x - y);
+    for (let i = 0; i < ns.length;){
+      let j = i; while (j + 1 < ns.length && ns[j+1] === ns[j] + 1) j++;
+      out.push(j - i >= 2 ? `${pre}${ns[i]}–${pre}${ns[j]}` : ns.slice(i, j + 1).map(n => pre + n).join(', '));
+      i = j + 1;
+    }
+  });
+  return out.concat(other).join(', ');
 }
 function drawSchedule(c, a, page){
   const u = unitOf(page), fp = (a.style.fs || 8)*u*1.6, pad = fp*0.5, rh = fp*1.9, iw = fp*2.8;
-  const rows = scheduleRows(page), title = 'VALVE & COMPONENT SCHEDULE';
-  const refTxt = r => { const t = [...new Set(r.tags)].join(', '); return t.length > 48 ? t.slice(0, 47) + '…' : t; };
+  const rows = scheduleRows(page), title = 'VALVE & COMPONENT SCHEDULE', withSize = rows.some(r => r.size);
+  const refTxt = r => { const t = compressTags(r.tags); return t.length > 60 ? t.slice(0, 59) + '…' : t; };
+  const hdr = withSize ? ['Symbol', 'Description', 'Size', 'Qty', 'Ref / tag'] : ['Symbol', 'Description', 'Qty', 'Ref / tag'];
   c.save(); c.globalAlpha = 1; c.setLineDash([]);
-  c.font = `${fp}px ${FONT}`;
-  c.font = `bold ${fp}px ${FONT}`; const symHdr = c.measureText('Symbol').width; c.font = `${fp}px ${FONT}`;
-  const cols = [Math.max(iw, symHdr) + pad*2,
-    Math.max(c.measureText('Description').width, ...rows.map(r => c.measureText(r.def.n).width)) + pad*2,
-    c.measureText('Qty').width*1.3 + pad*2,
-    Math.max(c.measureText('Ref / tag').width, ...rows.map(r => c.measureText(refTxt(r)).width)) + pad*2];
+  c.font = `bold ${fp}px ${FONT}`; const hw = hdr.map(t => c.measureText(t).width); c.font = `${fp}px ${FONT}`;
+  const cols = [Math.max(iw, hw[0]) + pad*2, Math.max(hw[1], ...rows.map(r => c.measureText(r.def.n).width)) + pad*2];
+  if (withSize) cols.push(Math.max(hw[2], ...rows.map(r => c.measureText(r.size).width)) + pad*2);
+  cols.push(c.measureText('Qty').width*1.3 + pad*2);
+  cols.push(Math.max(hw[hw.length-1], ...rows.map(r => c.measureText(refTxt(r)).width)) + pad*2);
   c.font = `bold ${fp*1.05}px ${FONT}`;
   const tw = c.measureText(title).width + pad*2;
   let w = cols.reduce((s2, v) => s2 + v, 0); if (w < tw){ cols[1] += tw - w; w = tw; }
@@ -748,10 +852,10 @@ function drawSchedule(c, a, page){
   c.fillStyle = '#14284b'; c.fillRect(x, y, w, rh);
   c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(title, x + pad, y + rh/2);
   c.font = `bold ${fp}px ${FONT}`; c.fillStyle = '#14284b';
-  let cx = x; ['Symbol', 'Description', 'Qty', 'Ref / tag'].forEach((t, i) => { c.fillText(t, cx + pad, y + rh*1.5); cx += cols[i]; });
+  let cx = x; hdr.forEach((t, i) => { c.fillText(t, cx + pad, y + rh*1.5); cx += cols[i]; });
   c.strokeStyle = '#14284b'; c.lineWidth = fp*0.05;
   for (let i = 2; i <= 1 + n; i++){ c.beginPath(); c.moveTo(x, y + rh*i); c.lineTo(x + w, y + rh*i); c.stroke(); }
-  cx = x; for (let i = 0; i < 3; i++){ cx += cols[i]; c.beginPath(); c.moveTo(cx, y + rh); c.lineTo(cx, y + h); c.stroke(); }
+  cx = x; for (let i = 0; i < cols.length - 1; i++){ cx += cols[i]; c.beginPath(); c.moveTo(cx, y + rh); c.lineTo(cx, y + h); c.stroke(); }
   c.lineWidth = fp*0.09; c.strokeRect(x, y, w, h);
   c.font = `${fp}px ${FONT}`;
   if (!rows.length){ c.fillStyle = '#647083'; c.fillText('No HVAC symbols on this page yet', x + pad, y + rh*2.5); }
@@ -761,8 +865,9 @@ function drawSchedule(c, a, page){
     c.strokeStyle = c.fillStyle = r.color; c.lineWidth = fp*0.08/k; c.lineJoin = 'round'; c.lineCap = 'round';
     r.def.d(symKit(c, r.color)); c.restore();
     c.fillStyle = '#1b2533'; c.textAlign = 'left';
-    let tx = x + cols[0]; c.fillText(r.def.n, tx + pad, ry + rh/2); tx += cols[1];
-    c.textAlign = 'center'; c.fillText(String(r.n), tx + cols[2]/2, ry + rh/2); tx += cols[2];
+    let tx = x + cols[0], ci = 1; c.fillText(r.def.n, tx + pad, ry + rh/2); tx += cols[ci++];
+    if (withSize){ c.fillText(r.size, tx + pad, ry + rh/2); tx += cols[ci++]; }
+    c.textAlign = 'center'; c.fillText(String(r.n), tx + cols[ci]/2, ry + rh/2); tx += cols[ci++];
     c.textAlign = 'left'; c.fillText(refTxt(r), tx + pad, ry + rh/2);
   });
   c.restore();
@@ -783,7 +888,8 @@ function drawSymTag(c, a, page){
   const cs = boxPts(b).map(q => toWorld(a, q)), xs = cs.map(q => q[0]), ys = cs.map(q => q[1]);
   const x = (Math.min(...xs) + Math.max(...xs))/2, y = Math.max(...ys) + f*0.2;
   c.save(); c.globalAlpha = 1; c.setLineDash([]); c.font = `bold ${f}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'top';
-  c.lineJoin = 'round'; c.strokeStyle = '#fff'; c.lineWidth = f*0.28; c.strokeText(a.tag, x, y); c.fillStyle = a.style.color; c.fillText(a.tag, x, y);
+  const txt = [a.tag, a.style.size].filter(Boolean).join(' · ');
+  c.lineJoin = 'round'; c.strokeStyle = '#fff'; c.lineWidth = f*0.28; c.strokeText(txt, x, y); c.fillStyle = a.style.color; c.fillText(txt, x, y);
   c.restore();
 }
 
@@ -803,7 +909,7 @@ function drawAnn(c, a, page){
   if (a.type === 'patch'){ c.save(); c.fillStyle = '#fff'; c.fillRect(...a.src); c.restore(); }
   c.save(); applyRot(c, a); drawAnnBody(c, a, page); c.restore();
   if (a.type === 'cloud' && a.pts[2] && (a.text || a._editing)) drawCloudNote(c, a, page);
-  if (a.type === 'sym' && a.tag) drawSymTag(c, a, page);
+  if (a.type === 'sym' && (a.tag || a.style.size)) drawSymTag(c, a, page);
 }
 function drawCloudNote(c, a, page){
   const u = unitOf(page), st = a.style, fp = (st.fs || 11)*u*1.6, N = a.pts[2];
@@ -911,7 +1017,7 @@ function drawAnnBody(c, a, page){
       break; }
     case 'legend': {
       const fp = st.fs*u*1.6, pad = fp*0.6, lh = fp*1.6, swl = fp*2.2;
-      const used = new Set(page.anns.filter(x => !['legend','whiteout','patch','image','schedule'].includes(x.type) && x.style && x.style.color).map(x => x.style.color.toLowerCase()));
+      const used = new Set(page.anns.filter(x => !['legend','whiteout','patch','image','schedule','pipe'].includes(x.type) && x.style && x.style.color).map(x => x.style.color.toLowerCase()));
       let items = settings.legend.filter(l => used.has(l.c.toLowerCase()) && l.label);
       if (!items.length) items = settings.legend.filter(l => l.c.toLowerCase() !== '#ffffff' && l.label);
       c.font = `${fp}px ${FONT}`;
@@ -940,6 +1046,21 @@ function drawAnnBody(c, a, page){
       const txt = a.type === 'calibrate' ? 'Known dimension' : fmtLen(L, page);
       label(c, txt, (P[0][0]+P[1][0])/2, (P[0][1]+P[1][1])/2, st.fs*u*1.6, st.color);
       break; }
+    case 'pipe': {
+      setStroke(c, st, u); pathPts(c, P); c.stroke();
+      const sv = SERVICE_BY_ID[st.svc], txt = [sv && sv.lbl, st.size].filter(Boolean).join(' ');
+      if (txt && P.length > 1){
+        const fp = (st.fs || 8)*u*1.6; c.font = `bold ${fp}px ${FONT}`; const tw = c.measureText(txt).width;
+        let best = -1, bl = 0;
+        for (let i = 1; i < P.length; i++){
+          const a0 = P[i-1], b0 = P[i], L = dist(a0, b0); if (L > bl){ bl = L; best = i; }
+          if (L < tw*2.2) continue;
+          const nLab = Math.max(1, Math.floor(L/(tw*12)));
+          for (let k = 1; k <= nLab; k++) pipeLabel(c, a0, b0, k/(nLab + 1), txt, fp, tw, st.color);
+        }
+        if (bl < tw*2.2 && best > 0) pipeLabel(c, P[best-1], P[best], 0.5, txt, fp, tw, st.color);
+      }
+      break; }
     case 'run': {
       setStroke(c, st, u); pathPts(c, P); c.stroke();
       c.fillStyle = st.color; P.forEach(p => { c.beginPath(); c.arc(p[0], p[1], st.lw*u*1.4, 0, Math.PI*2); c.fill(); });
@@ -953,6 +1074,12 @@ function drawAnnBody(c, a, page){
       break; }
   }
   c.restore();
+}
+function pipeLabel(c, a0, b0, t, txt, fp, tw, col){
+  let ang = Math.atan2(b0[1]-a0[1], b0[0]-a0[0]); if (ang > Math.PI/2) ang -= Math.PI; if (ang < -Math.PI/2) ang += Math.PI;
+  c.save(); c.translate(a0[0] + (b0[0]-a0[0])*t, a0[1] + (b0[1]-a0[1])*t); c.rotate(ang); c.setLineDash([]); c.globalAlpha = 1;
+  c.fillStyle = '#fff'; c.fillRect(-tw/2 - fp*0.3, -fp*0.65, tw + fp*0.6, fp*1.3);
+  c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 0, fp*0.05); c.restore();
 }
 function roundRect(c, x, y, w, h, r){ r = Math.min(r, w/2, h/2); c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 
@@ -996,7 +1123,7 @@ function hitAnn(a, p, tol){
   p = toLocal(a, p);
   switch (a.type){
     case 'line': case 'arrow': case 'measure': return segDist(p, a.pts[0], a.pts[1]) <= tol + lw;
-    case 'pen': case 'run': return polyDist(p, a.pts) <= tol + lw;
+    case 'pen': case 'run': case 'pipe': return polyDist(p, a.pts) <= tol + lw;
     case 'marker': return polyDist(p, a.pts) <= tol + lw*1.5;
     case 'polygon': case 'area': return (fillOf(a.style) && inPoly(p, a.pts)) || polyDist(p, a.pts, true) <= tol + lw;
     case 'rect': { const b = box(a.pts); if (fillOf(a.style)) return inBox(p, b, tol); return polyDist(p, boxPts(b), true) <= tol + lw; }
@@ -1333,17 +1460,17 @@ async function exportPDF(){
   if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
 }
 async function exportCSV(){
-  const d = S.doc, rows = [['Document','Date','Page','Markup','Colour','Colour meaning','Length (mm)','Area (m²)','Perimeter (mm)','Text / detail']];
+  const d = S.doc, rows = [['Document','Date','Page','Markup','Colour','Colour meaning','Size','Length (mm)','Area (m²)','Perimeter (mm)','Text / detail']];
   d.pages.forEach((p, i) => p.anns.forEach(a => {
     if (a.type === 'schedule') return;
     let len = '', area = '', per = '';
     if (p.mm){
       if (a.type === 'measure') len = Math.round(dist(a.pts[0], a.pts[1]) * p.mm);
-      if (a.type === 'run') len = Math.round(polyLen(a.pts) * p.mm);
+      if (a.type === 'run' || a.type === 'pipe') len = Math.round(polyLen(a.pts) * p.mm);
       if (a.type === 'area'){ area = (polyArea(a.pts) * p.mm * p.mm / 1e6).toFixed(2); per = Math.round(polyLen(a.pts, true) * p.mm); }
     }
     const detail = a.type === 'stamp' ? a.stamp : a.type === 'sym' ? (a.tag || '') : (a.sigLabel || a.text || '');
-    rows.push([d.name, ukDate(d.date), i+1, typeName(a), (a.style && a.style.color) || '', legendLabel(a.style && a.style.color), len, area, per, detail]);
+    rows.push([d.name, ukDate(d.date), i+1, typeName(a), (a.style && a.style.color) || '', (a.type === 'pipe' || a.type === 'sym') ? '' : legendLabel(a.style && a.style.color), (a.style && a.style.size) || '', len, area, per, detail]);
   }));
   const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }).join(',')).join('\r\n');
   const n = await saveBlob(new Blob([csv], {type:'text/csv'}), `${baseName()}_schedule.csv`, 'CSV spreadsheet', 'text/csv', '.csv');
@@ -1365,7 +1492,7 @@ function snapPt(p, exclude){
   S.snap = best ? best.slice() : null;
   return best ? best.slice() : p;
 }
-const SNAP_TOOLS = new Set(['line','arrow','measure','run','area','polygon','calibrate','callout']);
+const SNAP_TOOLS = new Set(['line','arrow','measure','run','area','polygon','calibrate','callout','pipe']);
 
 function setTool(t){
   if (t === 'image'){ $('#fileImage').click(); return; }
@@ -1450,7 +1577,9 @@ function onDown(e){
   }
   if (t === 'symbols'){
     if (!SYM_BY_ID[S.sym]){ toast('Pick a symbol in the panel first.'); return; }
-    checkpoint(); const a = makeSym(S.sym, p, S.symRot); page.anns.push(a);
+    checkpoint(); const a = makeSym(S.sym, p, S.symRot);
+    if (settings.autoTag !== false && SYM_PREFIX[a.sym]) a.tag = nextTag(SYM_PREFIX[a.sym]);
+    page.anns.push(a);
     if (ensureSchedule(page)) toast('Added a valve & component schedule to the top-right of this page. It fills in as you add symbols – drag it anywhere.', 6000, 'ok');
     markDirty(); return;
   }
@@ -1576,7 +1705,7 @@ function finishClickShape(){
   d.pts.pop();
   d.pts = d.pts.filter((p, i, arr) => i === 0 || dist(p, arr[i-1]) * S.zoom > 3);
   S.drawing = null; S.snap = null;
-  const need = d.type === 'run' ? 2 : 3;
+  const need = (d.type === 'run' || d.type === 'pipe') ? 2 : 3;
   if (d.pts.length < need){ render(); return; }
   delete d._tool; delete d._live;
   checkpoint(); cur().anns.push(d); markDirty(); render();
@@ -1699,6 +1828,8 @@ function updateProps(){
   $('#pFill').value = st.fill === 'white' ? 'solid' : (st.fill || 'none');
   { const fc = st.fill === 'white' ? '#ffffff' : (st.fillColor || st.color || '#ffeb3b'); if (/^#/.test(fc)) $('#pFillColor').value = fc.length === 4 ? '#' + fc.slice(1).split('').map(x=>x+x).join('') : fc; }
   if (st.shape) $('#pShape').value = st.shape;
+  if (st.svc) $('#pSvc').value = st.svc;
+  if (document.activeElement !== $('#pSize')) $('#pSize').value = st.size || '';
   if (st.tfill) $('#pTFill').value = st.tfill;
   if (st.fs != null) $('#pFs').value = st.fs;
   $('#pOpacity').value = Math.round((st.opacity ?? 1)*100);
@@ -1713,6 +1844,11 @@ function applyProp(key, val, final){
   if (final) propCheckpointed = false;
   const styleNow = sel ? sel.style : t.style;
   if (key === 'tag'){ if (sel) sel.tag = val; markDirty(); return; }
+  if (key === 'svc'){
+    const sv = SERVICE_BY_ID[val] || SERVICES[0];
+    [styleNow, S.styles.pipe].forEach(o => { o.svc = sv.id; o.color = sv.c; o.dash = sv.dash; });
+    if (sel) markDirty(); else render(); updateProps(); return;
+  }
   if (key === 'stamp'){
     if (sel){ sel.stamp = val; sel.style.color = STAMPS[val] || sel.style.color; }
     S.styles.stamp.stamp = val; S.styles.stamp.color = STAMPS[val] || S.styles.stamp.color;
@@ -1852,6 +1988,8 @@ function renderMarkupList(){
     const A = ar.reduce((s, a) => s + polyArea(a.pts), 0);
     tot.innerHTML = `<div class="totals"><div class="side-h" style="margin:0 0 4px">Page totals</div>${m.length + r.length ? `Lengths: <b>${esc(fmtLen(L, page))}</b><br>` : ''}${ar.length ? `Areas: <b>${esc(fmtArea(A, page))}</b>` : ''}</div>`;
   } else tot.innerHTML = '';
+  const pl = {}; page.anns.filter(a => a.type === 'pipe').forEach(a => { const k = typeName(a).replace('Pipe – ', '') + (a.style.size ? ' ' + a.style.size : ''); pl[k] = (pl[k] || 0) + polyLen(a.pts); });
+  if (Object.keys(pl).length) tot.innerHTML += `<div class="totals"><div class="side-h" style="margin:0 0 4px">Pipework on this page</div>${Object.keys(pl).sort().map(k => `${esc(k)}: <b>${esc(page.mm ? fmtLen(pl[k], page) : 'set a scale to measure')}</b>`).join('<br>')}</div>`;
   const counts = {}; page.anns.filter(a => a.type === 'sym').forEach(a => { const n = typeName(a); counts[n] = (counts[n] || 0) + 1; });
   const ck = Object.keys(counts).sort();
   if (ck.length) tot.innerHTML += `<div class="totals"><div class="side-h" style="margin:0 0 4px">HVAC symbols on this page</div>${ck.map(n => `${counts[n]} × ${esc(n)}`).join('<br>')}</div>`;
@@ -2129,7 +2267,7 @@ function drawSymIcon(cv, def, col){
 function renderSymGrid(){
   const q = ($('#symSearch').value || '').toLowerCase().trim(), col = S.styles.sym.color, grid = $('#symGrid');
   grid.innerHTML = '';
-  for (const g of [...new Set(SYMS.map(x => x.g))]){
+  for (const g of SYM_GROUPS){
     const items = SYMS.filter(x => x.g === g && (!q || `${x.n} ${x.k} ${g}`.toLowerCase().includes(q)));
     if (!items.length) continue;
     const h = document.createElement('div'); h.className = 'sym-g'; h.textContent = g; grid.appendChild(h);
@@ -2250,6 +2388,8 @@ function init(){
   $('#symGrid').addEventListener('click', e => { const b = e.target.closest('[data-sym]'); if (!b) return; S.sym = b.dataset.sym; $$('#symGrid .sym-btn').forEach(x => x.classList.toggle('on', x === b)); render(); });
   $('#symSearch').addEventListener('input', renderSymGrid);
   $('#symSched').checked = settings.autoSchedule !== false;
+  $('#symAutoTag').checked = settings.autoTag !== false;
+  $('#symAutoTag').addEventListener('change', e => { settings.autoTag = e.target.checked; saveSettings(); });
   $('#symSched').addEventListener('change', e => {
     settings.autoSchedule = e.target.checked; saveSettings();
     const page = cur(); if (!page) return;
@@ -2259,6 +2399,8 @@ function init(){
   $('#symClose').onclick = () => setTool('select');
   $$('[data-symdir]').forEach(b => b.onclick = () => { S.symRot = (+b.dataset.symdir)*Math.PI/180; syncSymDir(); });
   $('#symSize').addEventListener('input', e => { S.symSize = +e.target.value/100; $('#symSizeLbl').textContent = e.target.value + '%'; });
+  $('#pSvc').innerHTML = SERVICES.map(x => `<option value="${x.id}">${esc(x.n)}</option>`).join('');
+  bindProp('#pSvc', 'svc', v => v); bindProp('#pSize', 'size', v => v.trim());
   $('#pTag').addEventListener('input', e => applyProp('tag', e.target.value, false));
   $('#pTag').addEventListener('change', e => applyProp('tag', e.target.value, true));
   $('#pTag').addEventListener('keydown', e => e.stopPropagation());
