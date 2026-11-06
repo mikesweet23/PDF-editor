@@ -212,6 +212,11 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 #saveState.saved{background:#2e7d32;color:#fff}
 .save-file{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--muted);word-break:break-all}
 .save-file b{color:var(--text)}
+.new-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.new-row label{display:block}
+.new-row label>span{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.new-row select,.new-row input{width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--field);color:var(--text)}
+@media (max-width:480px){.new-row{grid-template-columns:1fr}}
 .save-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
 .save-opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--border);background:var(--field);border-radius:10px;padding:12px 14px;color:var(--text)}
 .save-opt:hover,.save-opt:focus-visible{border-color:var(--accent);background:var(--accent-soft);outline:none}
@@ -256,6 +261,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   <span id="saveState" hidden></span>
   <span class="hdr-date" id="hdrDate"></span>
   <div class="spacer"></div>
+  <button class="hbtn" id="btnNew" title="New – blank canvas, change drawing or close the current one"><svg class="i" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg><span class="lbl">New</span></button>
   <button class="hbtn" id="btnOpen" title="Open PDF, JPEG, PNG or saved markup (Ctrl+O)"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span class="lbl">Open</span></button>
   <button class="hbtn" id="btnUndo" title="Undo (Ctrl+Z)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
   <button class="hbtn" id="btnRedo" title="Redo (Ctrl+Y)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
@@ -328,6 +334,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
       <div class="drop" id="drop">
         <div style="margin-bottom:12px">Drag a drawing here, or</div>
         <button class="big-btn" id="btnOpen2">Open a file</button>
+        <div style="margin-top:10px"><button class="link-btn" id="btnBlank2">or start a blank canvas to draft a concept</button></div>
         <div class="formats">PDF · JPEG · PNG · TIFF (incl. multi-page) · WebP · GIF · BMP<br>and saved .adimarkup.json projects<br>Files stay on this computer – nothing is uploaded.</div>
       </div>
       <div id="restoreBox" hidden>
@@ -677,6 +684,8 @@ function symKit(c, col){
     arr: (x1, y1, x2, y2, hs = 0.3) => { K.ln(x1, y1, x2, y2); const a = Math.atan2(y2-y1, x2-x1); poly([[x2,y2],[x2-hs*Math.cos(a-0.45), y2-hs*Math.sin(a-0.45)],[x2-hs*Math.cos(a+0.45), y2-hs*Math.sin(a+0.45)]], true, col); },
     tee: () => K.circ(0, 0, 0.1, col),
     act: label => { K.ln(0, 0, 0, -0.85); K.rect(-0.48, -1.45, 0.96, 0.6); K.txt(label, 0, -1.15, label.length > 1 ? 0.36 : 0.44); },
+    // two valves with an intermediate (bleed) chamber and a bleed valve draining from the middle
+    twinBleed: () => { K.ln(-0.6,0,0.6,0); K.bowAt(-1.05,0.45,0.42); K.bowAt(1.05,0.45,0.42); K.circ(0,0,0.08,col); K.ln(0,0,0,0.5); poly([[-0.24,0.5],[0.24,0.5],[0,0.82]]); poly([[-0.24,1.14],[0.24,1.14],[0,0.82]]); K.ln(0,1.14,0,1.3); K.arr(0,1.3,0,1.56,0.2); },
     bowAt: (cx, w, h) => { poly([[cx-w,-h],[cx-w,h],[cx,0]]); poly([[cx+w,-h],[cx+w,h],[cx,0]]); },
     fanBlades: (cx, cy, r) => { [0, 2.1, 4.2].forEach(a0 => { c.beginPath(); c.moveTo(cx, cy); c.quadraticCurveTo(cx + r*Math.cos(a0+0.5), cy + r*Math.sin(a0+0.5), cx + r*Math.cos(a0), cy + r*Math.sin(a0)); c.stroke(); }); K.circ(cx, cy, r*0.18, col); },
     pumpIn: (cx, cy, r) => { K.circ(cx, cy, r); poly([[cx + r, cy],[cx - r*0.5, cy + r*0.866],[cx - r*0.5, cy - r*0.866]], true, null); },
@@ -751,7 +760,8 @@ const SYMS = [
 
   // Valves (more)
   {id:'tmv', g:'Valves', n:'Thermostatic mixing valve (TMV)', s:'TMV', k:'tmv thermostatic mixing blending', b:[-1,-1.55,1,1.6], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.ln(0,0,0,-0.7); K.circ(0,-1.1,0.4); K.txt('T',0,-1.1,0.45); K.txt('TMV',0,1.35,0.3); }},
-  {id:'dcv', g:'Valves', n:'Double check valve', s:'Double check', k:'dcv double check backflow wras', b:[-1.2,-1.05,1.2,1.15], d:K => { K.bowAt(-0.6,0.55,0.45); K.bowAt(0.6,0.55,0.45); K.arr(-0.9,-0.8,0.9,-0.8,0.26); K.txt('DCV',0,0.85,0.32); }},
+  {id:'dcv', g:'Valves', n:'Double check valve (with bleed)', s:'Double check', k:'dcv double check backflow wras bleed', b:[-1.55,-1.35,1.55,1.6], d:K => { K.twinBleed(); K.arr(-1.3,-0.78,1.3,-0.78,0.26); K.txt('DCV',0,-1.12,0.3); }},
+  {id:'dbb', g:'Valves', n:'Double block and bleed valve', s:'Double block & bleed', k:'dbb double block bleed isolation', b:[-1.55,-1.05,1.55,1.6], d:K => { K.twinBleed(); K.txt('DBB',0,-0.8,0.32); }},
   {id:'solenoid', g:'Valves', n:'Solenoid valve', s:'Solenoid valve', k:'solenoid valve electric', b:[-1,-1.42,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.75); K.rect(-0.42,-1.35,0.84,0.6); K.txt('S',0,-1.05,0.42); }},
   {id:'float', g:'Valves', n:'Float valve', s:'Float valve', k:'float valve ball cock tank inlet', b:[-1,-1.35,2.1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.5); K.ln(0,-0.5,1.5,-0.95); K.circ(1.75,-1.0,0.3); }},
   {id:'flushbyp', g:'Valves', n:'Flushing bypass (pre-commission cleaning)', s:'Flushing bypass', k:'flushing bypass cleaning temporary', b:[-1.35,-2.0,1.35,0.12], d:K => { K.ln(-1.2,0,1.2,0); K.circ(-1.2,0,0.08,K.col); K.circ(1.2,0,0.08,K.col); K.dashed(() => { K.poly([[-1.2,0],[-1.2,-1.1],[-0.55,-1.1]], false, null); K.poly([[0.55,-1.1],[1.2,-1.1],[1.2,0]], false, null); }); K.bowAt(0,0.55,0.35); K.c.save(); K.c.translate(0,-1.1); K.bowAt(0,0.55,0.35); K.c.restore(); K.txt('FLUSHING',0,-1.75,0.28); }},
@@ -798,7 +808,7 @@ const SYMS = [
 const SYM_BY_ID = Object.fromEntries(SYMS.map(x => [x.id, x]));
 const SYM_GROUPS = ['Valves','Control valves','Pumps & ancillaries','Water treatment','Plant & equipment','Heat emitters & terminals','Ventilation & air conditioning','Sensors & controls','Pipework'];
 /* Tag prefixes used when tags are numbered automatically (IV1, IV2, P1…). */
-const SYM_PREFIX = {iso:'IV', ball:'BLV', bfly:'BFV', globe:'GV', nrv:'NRV', drv:'DRV', comm:'CS', drainv:'DV', tundish:'TD', drain:'DC', relief:'SV', lock:'LS', prv:'PRV', trv:'TRV', tmv:'TMV', dcv:'DCV', solenoid:'SOV', float:'FV', flushbyp:'FB',
+const SYM_PREFIX = {iso:'IV', ball:'BLV', bfly:'BFV', globe:'GV', nrv:'NRV', drv:'DRV', comm:'CS', drainv:'DV', tundish:'TD', drain:'DC', relief:'SV', lock:'LS', prv:'PRV', trv:'TRV', tmv:'TMV', dcv:'DCV', dbb:'DBB', solenoid:'SOV', float:'FV', flushbyp:'FB',
   cv2:'CV', mix3:'CV', div3:'CV', zone:'ZV', picv:'PICV', dpcv:'DPCV',
   pump:'P', pump2:'P', strainer:'ST', bypass:'BPV', aav:'AAV', expv:'EV', fm:'FM', hm:'HM',
   dirtsep:'DS', airsep:'AS', airdirt:'ADS', llh:'LLH', magfilter:'MF', sidestream:'SSF', degasser:'VD', dosing:'DOS',
@@ -1336,7 +1346,7 @@ function cacheAsset(id){ return new Promise(res => { if (S.imgCache[id] && S.img
 /* ---------- Open documents ---------- */
 async function openFile(file){
   if (!file) return;
-  if (S.dirty && S.doc && !(await ask('Open a new file?', 'Markups on the current document that you have not saved will be lost.', 'Open new file', 'Cancel'))) return;
+  if (!(await confirmLeave())) return;
   const name = file.name.replace(/\.[^.]+$/, ''), ext = (file.name.split('.').pop() || '').toLowerCase();
   try {
     if (ext === 'adimarkup' || ext === 'json'){ await loadProject(JSON.parse(await file.text())); S.fileHandle = null; return; }
@@ -1375,6 +1385,80 @@ async function decodeTiff(bytes){
   }
   if (!out.length) throw new Error('this TIFF uses a format that could not be read');
   return out;
+}
+/* ---------- New: change drawing, blank canvas, close ---------- */
+/* Asks before the current drawing is replaced. Resolves true to carry on. */
+function confirmLeave(){
+  if (!S.doc || !S.dirty) return Promise.resolve(true);
+  return new Promise(res => {
+    modal('Save changes first?', `<p style="margin:0">“${esc(S.doc.name || 'This drawing')}” has changes that haven\'t been saved to a file yet.</p><p class="muted" style="margin:8px 0 0">If you don\'t save, the last session can still be restored from the welcome screen until you change something else.</p>`, [
+      {label:'Cancel', fn: () => { res(false); }},
+      {label:"Don't save", cls:'danger', fn: () => { res(true); }},
+      {label:'Save first', cls:'primary', fn: () => { modalEl._onClose = null; saveProject(false).then(() => res(!S.dirty), () => res(false)); }},
+    ]);
+    modalEl._onClose = () => res(false);
+  });
+}
+const PAPER = {A4:[210, 297], A3:[297, 420], A2:[420, 594], A1:[594, 841], A0:[841, 1189]};
+function openNewDialog(){
+  const scales = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
+  modal('New', `
+    <div class="save-grid" style="margin-top:0">
+      <button class="save-opt" id="nOpen" style="grid-column:1/-1"><b>Open another drawing</b><small>PDF, JPEG, PNG, TIFF or a saved project – replaces the one that\'s open</small></button>
+    </div>
+    <div class="opt" style="margin-bottom:8px">
+      <h3>Blank canvas – draft a concept from scratch</h3>
+      <div class="new-row" style="margin-bottom:10px">
+        <label><span>Paper size</span><select id="nSize">${Object.keys(PAPER).map(k => `<option ${k === 'A3' ? 'selected' : ''}>${k}</option>`).join('')}</select></label>
+        <label><span>Orientation</span><select id="nOrient"><option value="landscape" selected>Landscape</option><option value="portrait">Portrait</option></select></label>
+        <label><span>Drawing scale</span><select id="nScale">${scales.map(n => `<option value="${n}" ${n === 50 ? 'selected' : ''}>1:${n}</option>`).join('')}<option value="0">Not to scale</option></select></label>
+        <label><span>Background grid</span><select id="nGrid"><option value="10" selected>10 mm grid</option><option value="5">5 mm grid</option><option value="0">No grid</option></select></label>
+      </div>
+      <label class="field" style="margin-bottom:10px"><span>Name</span><input type="text" id="nName" value="Concept sketch" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--field);color:var(--text)"></label>
+      <button class="btn primary" id="nBlank" style="width:100%">Create blank canvas</button>
+      <p class="muted" style="margin:8px 0 0">The scale is set for you, so measuring works straight away. Grid squares are true paper millimetres (a 10 mm square at 1:50 is 500 mm).</p>
+    </div>
+    ${S.doc ? '<button class="link-btn" id="nClose" style="padding:4px 0">Close the current drawing</button>' : ''}`,
+    [{label:'Cancel', fn: () => true}],
+    () => {
+      $('#nOpen').onclick = () => { closeModal(); $('#fileOpen').click(); };
+      $('#nBlank').onclick = async () => {
+        const opts = {size:$('#nSize').value, orient:$('#nOrient').value, scale:+$('#nScale').value, grid:+$('#nGrid').value, name:$('#nName').value.trim() || 'Concept sketch'};
+        closeModal();
+        if (!(await confirmLeave())) return;
+        createBlank(opts);
+      };
+      const nc = $('#nClose'); if (nc) nc.onclick = async () => { closeModal(); closeDoc(); };
+    });
+}
+async function createBlank({size, orient, scale, grid, name}){
+  try {
+    const {PDFDocument, rgb} = PDFLib, pt = v => v*72/25.4;
+    let [w, h] = PAPER[size] || PAPER.A3; if (orient === 'landscape') [w, h] = [h, w];
+    const pdf = await PDFDocument.create(), pg = pdf.addPage([pt(w), pt(h)]);
+    if (grid > 0){
+      const minor = rgb(0.9, 0.92, 0.95), major = rgb(0.78, 0.82, 0.88);
+      for (let i = 1; i*grid < w; i++){ const m = i % (grid === 5 ? 10 : 5) === 0; pg.drawLine({start:{x:pt(i*grid), y:0}, end:{x:pt(i*grid), y:pt(h)}, thickness:m ? 0.5 : 0.25, color:m ? major : minor}); }
+      for (let i = 1; i*grid < h; i++){ const m = i % (grid === 5 ? 10 : 5) === 0; pg.drawLine({start:{x:0, y:pt(i*grid)}, end:{x:pt(w), y:pt(i*grid)}, thickness:m ? 0.5 : 0.25, color:m ? major : minor}); }
+    }
+    pdf.setTitle(name); pdf.setCreator('ADI Markup');
+    const bytes = await pdf.save();
+    S.dirty = false;
+    await loadDoc({type:'pdf', mime:'application/pdf', bytes, name});
+    S.fileHandle = null;
+    if (scale > 0) S.doc.pages.forEach(p => { p.mm = 25.4/72*scale; p.scaleLabel = `1:${scale}`; p.ratio = scale; });
+    updateAll();
+    toast(`✓ Blank ${size} ${orient} canvas ready${scale > 0 ? ' at 1:' + scale : ''}. Draw away – straight lines lock to 45°/90° (Alt for any angle).`, 6000, 'ok');
+  } catch (e) { console.error(e); toast('Could not create the blank canvas: ' + (e.message || e), 6000, 'err'); }
+}
+async function closeDoc(){
+  if (!(await confirmLeave())) return;
+  commitEditor(); cancelDrawing();
+  S.doc = null; S.pdf = null; S.imgs = []; S.sel = null; S.undo = []; S.redo = []; S.fileHandle = null; S.dirty = false;
+  $('#saveState').hidden = true; $('#welcome').hidden = false;
+  ['#docName', '#btnSave', '#btnExport'].forEach(x => $(x).disabled = true);
+  $('#thumbs').innerHTML = '<div class="muted">No document open.</div>';
+  setTool('select'); updateAll(); render();
 }
 async function loadDoc(src, saved){
   showBusy('Opening…');
@@ -2498,6 +2582,8 @@ function init(){
   new ResizeObserver(() => { const t = view.getBoundingClientRect().top; if (S.doc && t !== lastTop) S.oy += lastTop - t; lastTop = t; draw(); }).observe(view);
 
   $('#btnOpen').onclick = $('#btnOpen2').onclick = () => $('#fileOpen').click();
+  $('#btnNew').onclick = openNewDialog;
+  $('#btnBlank2').onclick = openNewDialog;
   $('#fileOpen').onchange = e => { openFile(e.target.files[0]); e.target.value = ''; };
   $('#fileImage').onchange = e => { insertImageFile(e.target.files[0]); e.target.value = ''; };
   $('#btnSave').onclick = openSaveDialog;
