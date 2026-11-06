@@ -280,6 +280,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
   <label class="prop" data-p="svc">Service <select id="pSvc"></select></label>
   <label class="prop" data-p="psize">Size <input type="text" id="pSize" size="7" maxlength="16" placeholder="e.g. 28mm"></label>
+  <label class="prop" data-p="note">Note <input type="text" id="pNote" size="44" maxlength="400" placeholder="Note shown at the bottom of the schedule"></label>
   <label class="prop" data-p="tag">Tag <input type="text" id="pTag" size="8" maxlength="24" placeholder="e.g. V1, 25mm"></label>
   <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
   <div class="prop" data-p="sig"><div class="sigs" id="sigList"></div><button class="pbtn" id="sigNew">+ New signature</button><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="sigDate"> Add “Signed” date</label></div>
@@ -482,7 +483,7 @@ const PROPS = {
   rect:['color','lw','dash','fill','opacity'], ellipse:['color','lw','dash','fill','opacity'], polygon:['color','lw','dash','fill','opacity'],
   cloud:['color','lw','fill','shape','fs','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
   image:['opacity'], signature:['sig'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
-  patch:[], schedule:['fs'], sym:['color','lw','fs','psize'], pipe:['svc','psize','color','lw','dash','fs'], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
+  patch:[], schedule:['fs','note'], sym:['color','lw','fs','psize'], pipe:['svc','psize','color','lw','dash','fs'], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
 };
 const STAMPS = {
   'APPROVED':'#2e7d32','APPROVED AS NOTED':'#ef6c00','REVISED':'#1565c0','FOR COMMENT':'#1565c0','FOR INFORMATION':'#455a64',
@@ -833,32 +834,61 @@ function compressTags(tags){
   });
   return out.concat(other).join(', ');
 }
+const DEFAULT_SCHED_NOTE = 'Pipe sizes are nominal bore (mm) unless stated otherwise. All sizes to be confirmed by the designer before installation.';
+function schedulePipes(page){
+  const by = {}, order = [];
+  for (const a of page.anns) if (a.type === 'pipe'){
+    const size = (a.style.size || '').trim(), key = a.style.svc + '|' + size;
+    if (!by[key]){ by[key] = {sv:SERVICE_BY_ID[a.style.svc] || SERVICES[SERVICES.length-1], size, len:0, color:a.style.color, dash:a.style.dash}; order.push(key); }
+    by[key].len += polyLen(a.pts);
+  }
+  const idx = id => SERVICES.findIndex(x => x.id === id);
+  return order.sort((p, q) => idx(by[p].sv.id) - idx(by[q].sv.id) || by[p].size.localeCompare(by[q].size, 'en', {numeric:true})).map(k => by[k]);
+}
+function wrapText(c, text, maxW){
+  const out = []; let line = '';
+  for (const w of text.split(/\s+/)){ const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line){ out.push(line); line = w; } else line = t; }
+  if (line) out.push(line); return out;
+}
 function drawSchedule(c, a, page){
   const u = unitOf(page), fp = (a.style.fs || 8)*u*1.6, pad = fp*0.5, rh = fp*1.9, iw = fp*2.8;
-  const rows = scheduleRows(page), title = 'VALVE & COMPONENT SCHEDULE', withSize = rows.some(r => r.size);
+  const rows = scheduleRows(page), pipes = schedulePipes(page), title = 'VALVE & COMPONENT SCHEDULE';
+  const withSize = rows.some(r => r.size) || pipes.some(p => p.size);
+  const note = (a.note ?? DEFAULT_SCHED_NOTE).trim();
   const refTxt = r => { const t = compressTags(r.tags); return t.length > 60 ? t.slice(0, 59) + '…' : t; };
+  const lenTxt = p => page.mm ? fmtLen(p.len, page) : 'set a scale for length';
   const hdr = withSize ? ['Symbol', 'Description', 'Size', 'Qty', 'Ref / tag'] : ['Symbol', 'Description', 'Qty', 'Ref / tag'];
   c.save(); c.globalAlpha = 1; c.setLineDash([]);
-  c.font = `bold ${fp}px ${FONT}`; const hw = hdr.map(t => c.measureText(t).width); c.font = `${fp}px ${FONT}`;
-  const cols = [Math.max(iw, hw[0]) + pad*2, Math.max(hw[1], ...rows.map(r => c.measureText(r.def.n).width)) + pad*2];
-  if (withSize) cols.push(Math.max(hw[2], ...rows.map(r => c.measureText(r.size).width)) + pad*2);
-  cols.push(c.measureText('Qty').width*1.3 + pad*2);
-  cols.push(Math.max(hw[hw.length-1], ...rows.map(r => c.measureText(refTxt(r)).width)) + pad*2);
+  c.font = `bold ${fp}px ${FONT}`; const hw = hdr.map(t => c.measureText(t).width), pipeHdr = c.measureText('PIPEWORK').width; c.font = `${fp}px ${FONT}`;
+  const mw = t => c.measureText(t).width;
+  const cols = [Math.max(iw, hw[0], pipes.length ? pipeHdr*0 : 0) + pad*2, Math.max(hw[1], ...rows.map(r => mw(r.def.n)), ...pipes.map(p => mw(p.sv.n))) + pad*2];
+  if (withSize) cols.push(Math.max(hw[2], ...rows.map(r => mw(r.size)), ...pipes.map(p => mw(p.size || '–'))) + pad*2);
+  const qi = cols.length;
+  cols.push(mw('Qty')*1.3 + pad*2);
+  cols.push(Math.max(hw[hw.length-1], ...rows.map(r => mw(refTxt(r)))) + pad*2);
+  const needLen = Math.max(0, mw('Length'), ...pipes.map(p => mw(lenTxt(p)))) + pad*2;
+  if (pipes.length && cols[qi] + cols[qi+1] < needLen) cols[qi+1] += needLen - cols[qi] - cols[qi+1];
   c.font = `bold ${fp*1.05}px ${FONT}`;
   const tw = c.measureText(title).width + pad*2;
   let w = cols.reduce((s2, v) => s2 + v, 0); if (w < tw){ cols[1] += tw - w; w = tw; }
-  const n = Math.max(rows.length, 1), h = rh*(2 + n), x = a.pts[0][0] - w, y = a.pts[0][1];
+  const nf = fp*0.92; c.font = `${nf}px ${FONT}`;
+  const noteLines = note ? wrapText(c, 'Note: ' + note, w - pad*2) : [];
+  const nSym = rows.length || (pipes.length ? 0 : 1);
+  const symEnd = rh*(2 + nSym), pipeEnd = symEnd + (pipes.length ? rh*(1 + pipes.length) : 0);
+  const h = pipeEnd + (noteLines.length ? noteLines.length*nf*1.3 + pad*1.4 : 0);
+  const x = a.pts[0][0] - w, y = a.pts[0][1];
   c.fillStyle = '#fff'; c.fillRect(x, y, w, h);
   c.fillStyle = '#14284b'; c.fillRect(x, y, w, rh);
-  c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(title, x + pad, y + rh/2);
+  c.font = `bold ${fp*1.05}px ${FONT}`; c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(title, x + pad, y + rh/2);
   c.font = `bold ${fp}px ${FONT}`; c.fillStyle = '#14284b';
   let cx = x; hdr.forEach((t, i) => { c.fillText(t, cx + pad, y + rh*1.5); cx += cols[i]; });
   c.strokeStyle = '#14284b'; c.lineWidth = fp*0.05;
-  for (let i = 2; i <= 1 + n; i++){ c.beginPath(); c.moveTo(x, y + rh*i); c.lineTo(x + w, y + rh*i); c.stroke(); }
-  cx = x; for (let i = 0; i < cols.length - 1; i++){ cx += cols[i]; c.beginPath(); c.moveTo(cx, y + rh); c.lineTo(cx, y + h); c.stroke(); }
-  c.lineWidth = fp*0.09; c.strokeRect(x, y, w, h);
+  const hline = yy => { c.beginPath(); c.moveTo(x, yy); c.lineTo(x + w, yy); c.stroke(); };
+  const vline = (xx, y1, y2) => { c.beginPath(); c.moveTo(xx, y1); c.lineTo(xx, y2); c.stroke(); };
+  for (let i = 2; i <= 1 + nSym; i++) hline(y + rh*i);
+  cx = x; for (let i = 0; i < cols.length - 1; i++){ cx += cols[i]; vline(cx, y + rh, y + symEnd); }
   c.font = `${fp}px ${FONT}`;
-  if (!rows.length){ c.fillStyle = '#647083'; c.fillText('No HVAC symbols on this page yet', x + pad, y + rh*2.5); }
+  if (!rows.length && !pipes.length){ c.fillStyle = '#647083'; c.fillText('No HVAC symbols on this page yet', x + pad, y + rh*2.5); }
   rows.forEach((r, i) => {
     const ry = y + rh*(2 + i), [x0, y0, x1, y1] = r.def.b, ih = rh*0.74, k = Math.min(iw/(x1 - x0), ih/(y1 - y0));
     c.save(); c.translate(x + pad + iw/2 - (x0 + x1)/2*k, ry + rh/2 - (y0 + y1)/2*k); c.scale(k, k);
@@ -870,11 +900,39 @@ function drawSchedule(c, a, page){
     c.textAlign = 'center'; c.fillText(String(r.n), tx + cols[ci]/2, ry + rh/2); tx += cols[ci++];
     c.textAlign = 'left'; c.fillText(refTxt(r), tx + pad, ry + rh/2);
   });
+  // Pipework section: one row per service and size, with measured length
+  if (pipes.length){
+    const py = y + symEnd;
+    c.fillStyle = '#e6ecf5'; c.fillRect(x, py, w, rh); hline(py); hline(py + rh);
+    c.font = `bold ${fp}px ${FONT}`; c.fillStyle = '#14284b'; c.textAlign = 'left';
+    c.fillText('PIPEWORK', x + pad, py + rh/2);
+    let hx = x + cols[0] + cols[1]; if (withSize){ c.fillText('Size', hx + pad, py + rh/2); hx += cols[2]; }
+    c.fillText('Length', hx + pad, py + rh/2);
+    c.font = `${fp}px ${FONT}`;
+    pipes.forEach((p, i) => {
+      const ry = py + rh*(1 + i);
+      if (i) hline(ry);
+      c.save(); c.strokeStyle = p.color; c.lineWidth = fp*0.22; c.lineCap = 'butt';
+      c.setLineDash(p.dash === 'dashed' ? [fp*0.6, fp*0.35] : p.dash === 'dotted' ? [fp*0.15, fp*0.3] : []);
+      c.beginPath(); c.moveTo(x + pad, ry + rh/2); c.lineTo(x + cols[0] - pad, ry + rh/2); c.stroke(); c.restore();
+      c.fillStyle = '#1b2533'; c.textAlign = 'left';
+      let tx = x + cols[0]; c.fillText(p.sv.n, tx + pad, ry + rh/2); tx += cols[1];
+      if (withSize){ c.fillText(p.size || '–', tx + pad, ry + rh/2); tx += cols[2]; }
+      c.fillText(lenTxt(p), tx + pad, ry + rh/2);
+    });
+    cx = x; [0, 1].concat(withSize ? [2] : []).forEach(i => { cx += cols[i]; vline(cx, py + rh, y + pipeEnd); });
+  }
+  if (noteLines.length){
+    hline(y + pipeEnd);
+    c.font = `${nf}px ${FONT}`; c.fillStyle = '#1b2533'; c.textAlign = 'left'; c.textBaseline = 'top';
+    noteLines.forEach((l, i) => c.fillText(l, x + pad, y + pipeEnd + pad*0.7 + i*nf*1.3));
+  }
+  c.lineWidth = fp*0.09; c.strokeRect(x, y, w, h);
   c.restore();
   a._b = [x, y, w, h];
 }
 function ensureSchedule(page){
-  if (settings.autoSchedule === false || page.schedOff || page.anns.some(a => a.type === 'schedule') || !page.anns.some(a => a.type === 'sym')) return false;
+  if (settings.autoSchedule === false || page.schedOff || page.anns.some(a => a.type === 'schedule') || !page.anns.some(a => a.type === 'sym' || a.type === 'pipe')) return false;
   const u = unitOf(page);
   page.anns.push({id:uid(), type:'schedule', pts:[[PW(page) - u*15, u*15]], style:{fs:8}});
   return true;
@@ -1708,7 +1766,9 @@ function finishClickShape(){
   const need = (d.type === 'run' || d.type === 'pipe') ? 2 : 3;
   if (d.pts.length < need){ render(); return; }
   delete d._tool; delete d._live;
-  checkpoint(); cur().anns.push(d); markDirty(); render();
+  checkpoint(); cur().anns.push(d);
+  if (d.type === 'pipe' && ensureSchedule(cur())) toast('Added a schedule to the top-right of this page. It lists pipework by service and size – drag it anywhere.', 6000, 'ok');
+  markDirty(); render();
 }
 function onDbl(e){
   if (!S.doc) return;
@@ -1814,6 +1874,7 @@ function updateProps(){
   if (sel) show.add('selActions');
   if (show.has('sig')) renderSigList();
   if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
+  if (sel && sel.type === 'schedule' && document.activeElement !== $('#pNote')) $('#pNote').value = sel.note ?? DEFAULT_SCHED_NOTE;
   if (sel && sel.type === 'sym'){ show.add('tag'); if (document.activeElement !== $('#pTag')) $('#pTag').value = sel.tag || ''; }
   $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
   syncAngle();
@@ -1844,6 +1905,7 @@ function applyProp(key, val, final){
   if (final) propCheckpointed = false;
   const styleNow = sel ? sel.style : t.style;
   if (key === 'tag'){ if (sel) sel.tag = val; markDirty(); return; }
+  if (key === 'note'){ if (sel) sel.note = val; markDirty(); return; }
   if (key === 'svc'){
     const sv = SERVICE_BY_ID[val] || SERVICES[0];
     [styleNow, S.styles.pipe].forEach(o => { o.svc = sv.id; o.color = sv.c; o.dash = sv.dash; });
@@ -2401,6 +2463,8 @@ function init(){
   $('#symSize').addEventListener('input', e => { S.symSize = +e.target.value/100; $('#symSizeLbl').textContent = e.target.value + '%'; });
   $('#pSvc').innerHTML = SERVICES.map(x => `<option value="${x.id}">${esc(x.n)}</option>`).join('');
   bindProp('#pSvc', 'svc', v => v); bindProp('#pSize', 'size', v => v.trim());
+  $('#pNote').addEventListener('input', e => applyProp('note', e.target.value, false));
+  $('#pNote').addEventListener('change', e => applyProp('note', e.target.value, true));
   $('#pTag').addEventListener('input', e => applyProp('tag', e.target.value, false));
   $('#pTag').addEventListener('change', e => applyProp('tag', e.target.value, true));
   $('#pTag').addEventListener('keydown', e => e.stopPropagation());
