@@ -110,7 +110,8 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 .sym-row input[type=range]{flex:1;min-width:70px}
 .sym-check{display:flex;gap:7px;align-items:center;font-size:12.5px;color:var(--text);cursor:pointer}
 .sym-check input{flex:0 0 auto;margin:0}
-.sym-scroll{flex:1;overflow-y:auto;padding:2px 12px 12px}
+.sym-scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:2px 12px 12px}
+.sym-panel,.sym-panel *{touch-action:pan-y}
 .sym-g{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--heading);margin:12px 0 6px}
 .sym-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .sym-btn{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--border);background:#fff;color:#1b2533;border-radius:8px;padding:5px 3px 6px;font-size:10.5px;line-height:1.2;text-align:center;min-height:72px}
@@ -1949,6 +1950,8 @@ function onDbl(e){
 }
 function onWheel(e){
   if (!S.doc) return;
+  // Panels and boxes floating over the drawing scroll normally instead of zooming it
+  if (e.target !== canvas && e.target.closest && e.target.closest('#symPanel, #updateBar, .text-editor, #welcome')) return;
   e.preventDefault();
   const r = canvas.getBoundingClientRect();
   if (e.ctrlKey || e.metaKey || e.deltaX === 0 && !e.shiftKey){
