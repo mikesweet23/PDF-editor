@@ -473,24 +473,24 @@ const TYPE_NAME = {pipe:'Pipe service line', signature:'Sign', symbols:'HVAC sym
 const HINTS = {
   select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
   pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
-  line:'Drag to draw. Hold Shift for 0° / 45° / 90°.', arrow:'Drag from tail to tip. Hold Shift for 0° / 45° / 90°.',
+  line:'Drag to draw. Snaps to 0° / 45° / 90° – hold Alt for any angle.', arrow:'Drag from tail to tip. Snaps to 0° / 45° / 90° – hold Alt for any angle.',
   rect:'Drag to draw. Hold Shift for a square.', ellipse:'Drag to draw. Hold Shift for a circle.',
-  polygon:'Click to add corners. Double-click, Enter, or click the first point to finish.',
+  polygon:'Click to add corners (45°/90° – hold Alt for any angle). Double-click, Enter, or click the first point to finish.',
   pen:'Drag to draw freehand.', cloud:'Drag around the area. Pick Box or Ellipse and a fill above; Shift = square/circle. Then type a note (Esc to skip).',
-  text:'Click to place text. Ctrl+Enter or click away to finish.', callout:'Drag from the item you are pointing at to where the note should go.',
+  text:'Click to place text. Ctrl+Enter or click away to finish.', callout:'Drag from the item you are pointing at to where the note should go. Alt = any angle.',
   stamp:'Pick a stamp above, then click to place it. Drag a corner handle to resize.',
   image:'Choose an image to insert. You can also paste an image with Ctrl+V.',
   signature:'Click on the drawing to place your signature. Drag a corner to resize. Pick, add or delete signatures above.',
   legend:'Click to place a colour key. Edit the meanings in Settings.',
-  pipe:'Pick the service above, click along the pipe route, double-click or Enter to finish. Shift = 0/45/90°. Labels repeat on long runs.',
+  pipe:'Pick the service above, click along the pipe route, double-click or Enter to finish. Snaps to 45°/90° – hold Alt for any angle. Labels repeat on long runs.',
   symbols:'Pick a symbol in the panel, then click on the pipework to place it. Keep clicking to add more. [ ] rotate.',
   marker:'Drag over items to highlight them.', hlbox:'Drag a box to highlight an area.',
   whiteout:'Drag to cover part of the drawing. Then add text on top to “edit” it.',
   movearea:'Drag a box around the part of the drawing to move – then drag it to its new position.',
-  calibrate:'Drag along a dimension you know (e.g. a gridline span), then type its real length.',
-  measure:'Drag to measure. Snaps to markup end points. Shift = straight.',
-  run:'Click points along a run; double-click or Enter to finish. Gives total length.',
-  area:'Click around an area; double-click or Enter to finish. Gives m² and perimeter.',
+  calibrate:'Drag along a dimension you know (e.g. a gridline span), then type its real length. Alt = any angle.',
+  measure:'Drag to measure. Snaps to 0°/45°/90° and to markup end points – hold Alt for any angle.',
+  run:'Click points along a run (45°/90° – Alt for any angle); double-click or Enter to finish.',
+  area:'Click around an area (45°/90° – Alt for any angle); double-click or Enter to finish.',
 };
 const PROPS = {
   line:['color','lw','dash','opacity'], arrow:['color','lw','dash','opacity'], pen:['color','lw','opacity'],
@@ -552,6 +552,13 @@ function inPoly(p, pts){ let c = false; for (let i = 0, j = pts.length-1; i < pt
 const inBox = (p, b, t=0) => p[0] >= b[0]-t && p[0] <= b[0]+b[2]+t && p[1] >= b[1]-t && p[1] <= b[1]+b[3]+t;
 const boxPts = b => [[b[0],b[1]],[b[0]+b[2],b[1]],[b[0]+b[2],b[1]+b[3]],[b[0],b[1]+b[3]]];
 function constrainAngle(from, p){ const dx = p[0]-from[0], dy = p[1]-from[1], L = Math.hypot(dx,dy), a = Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4); return [from[0]+L*Math.cos(a), from[1]+L*Math.sin(a)]; }
+/* Straight-line tools lock to 0/45/90° by default; holding Alt gives a free angle.
+   A snap onto an existing end point always wins so lines still join up exactly. */
+const LINE_TYPES = new Set(['line','arrow','measure','calibrate','callout','polygon','run','area','pipe']);
+function angleLock(from, p, e){
+  if (!from || (e && e.altKey) || settings.angleSnap === false || S.snap) return p;
+  return constrainAngle(from, p);
+}
 function constrainSquare(from, p){ const dx = p[0]-from[0], dy = p[1]-from[1], s = Math.max(Math.abs(dx), Math.abs(dy)); return [from[0]+Math.sign(dx||1)*s, from[1]+Math.sign(dy||1)*s]; }
 
 /* ---------- Formatting ---------- */
@@ -1632,6 +1639,7 @@ function onDown(e){
     else {
       const d = S.drawing, fp = d.pts[0];
       if (d.pts.length > 3 && dist(q, fp) < 1e-6 && t !== 'run'){ d.pts.pop(); finishClickShape(); return; }
+      q = angleLock(d.pts[d.pts.length-2], q, e);
       d.pts[d.pts.length-1] = q; d.pts.push(q.slice());
     }
     render(); return;
@@ -1667,6 +1675,7 @@ function startPan(e){ S.drag = {mode:'pan', sx:e.clientX, sy:e.clientY, ox:S.ox,
 function onMove(e){
   if (!S.doc) return;
   if (S.pointers.has(e.pointerId)) S.pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (!e._synthetic) S.lastMove = {clientX:e.clientX, clientY:e.clientY, pointerId:e.pointerId, pointerType:e.pointerType, buttons:e.buttons, shiftKey:e.shiftKey};
   if (S.tool === 'symbols' && e.pointerType !== 'touch'){ S.hover = toPage(e); render(); }
   if (S.pinch && S.pointers.size === 2){
     const [a, b] = [...S.pointers.values()], d = Math.hypot(b[0]-a[0], b[1]-a[1]), m = [(a[0]+b[0])/2, (a[1]+b[1])/2];
@@ -1715,7 +1724,7 @@ function onMove(e){
         render(); return;
       }
       p = snapPt(p, a);
-      if (e.shiftKey && a.pts.length === 2 && ['line','arrow','measure','callout'].includes(a.type)) p = constrainAngle(a.pts[1-dr.i], p);
+      if (LINE_TYPES.has(a.type)){ const ref = a.pts.length === 2 ? a.pts[1-dr.i] : (a.pts[dr.i-1] || a.pts[dr.i+1]); p = angleLock(ref, p, e); }
       if ((a.type === 'image' || a.type === 'stamp' || a.type === 'sym') && a.pts.length === 2 && !e.altKey){
         const q = a.pts[1-dr.i], ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
         let dx = p[0]-q[0], dy = p[1]-q[1];
@@ -1733,10 +1742,8 @@ function onMove(e){
   }
   if (SNAP_TOOLS.has(S.tool)) p = snapPt(p);
   const anchor = d.pts[d.pts.length-2];
-  if (e.shiftKey){
-    if (['rect','ellipse','cloud','hlbox','whiteout'].includes(d.type) || d._tool === 'movearea') p = constrainSquare(anchor, p);
-    else p = constrainAngle(anchor, p);
-  }
+  if (['rect','ellipse','cloud','hlbox','whiteout'].includes(d.type) || d._tool === 'movearea'){ if (e.shiftKey) p = constrainSquare(anchor, p); }
+  else p = angleLock(anchor, p, e);
   d.pts[d.pts.length-1] = p; render();
 }
 
@@ -2151,6 +2158,7 @@ function openSettings(){
   modal('Settings', `
     <label class="field"><span>Your initials (for stamps &amp; footer)</span><input type="text" id="sInit" maxlength="12" value="${esc(settings.initials)}"></label>
     <label class="check"><input type="checkbox" id="sFooter" ${settings.footer ? 'checked' : ''}> Add ADI markup stamp (name, date, initials) to pages by default</label>
+    <label class="check"><input type="checkbox" id="sAngle" ${settings.angleSnap !== false ? 'checked' : ''}> Straight lines snap to 0° / 45° / 90° (hold Alt for any angle)</label>
     <label class="field"><span>Default units</span><select id="sUnits"><option value="mm">Millimetres (mm)</option><option value="m">Metres (m)</option></select></label>
     <div class="field"><span>Company logo (header, footer stamp)</span>
       <div class="row" style="margin:0"><input type="file" id="sLogo" accept="image/png,image/jpeg,image/svg+xml" style="flex:1;min-width:0">${settings.logo ? '<button class="btn danger" id="sLogoClear">Remove</button>' : ''}</div></div>
@@ -2160,7 +2168,7 @@ function openSettings(){
       <div class="row" style="margin:0"><span class="muted" style="flex:1">The installed app updates itself automatically. When a drawing is open you'll be asked first.</span><button class="btn" id="sCheckUpd">Check now</button></div></div>
     <p class="muted">Settings are stored in this browser on this computer.</p>`,
     [{label:'Cancel', fn: () => true}, {label:'Save settings', cls:'primary', fn: () => {
-      settings.initials = $('#sInit').value.trim(); settings.footer = $('#sFooter').checked; settings.units = $('#sUnits').value;
+      settings.initials = $('#sInit').value.trim(); settings.footer = $('#sFooter').checked; settings.angleSnap = $('#sAngle').checked; settings.units = $('#sUnits').value;
       $$('[data-lc]').forEach(el => settings.legend[+el.dataset.lc].c = el.value);
       $$('[data-ll]').forEach(el => settings.legend[+el.dataset.ll].label = el.value.trim());
       saveSettings(); buildSwatches();
@@ -2397,6 +2405,13 @@ document.addEventListener('keydown', e => {
   if ((e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') && getSel()){ e.preventDefault(); rotateSelBy((e.key === '[' || e.key === '{' ? -1 : 1) * (e.shiftKey ? 90 : 15)); return; }
   if (KEYMAP[k]) setTool(KEYMAP[k]);
 });
+function altChanged(e){
+  if (!S.doc || e.key !== 'Alt') return;
+  e.preventDefault();   // stop the browser menu bar taking focus on Windows
+  if ((S.drawing || (S.drag && S.drag.mode === 'handle')) && S.lastMove) onMove(Object.assign({}, S.lastMove, {altKey: e.type === 'keydown', _synthetic: true}));
+}
+document.addEventListener('keydown', altChanged);
+document.addEventListener('keyup', altChanged);
 document.addEventListener('keyup', e => { if (e.key === ' '){ S.space = false; view.classList.toggle('pan', S.tool === 'pan'); } });
 document.addEventListener('paste', async e => {
   const tag = (e.target.tagName || '').toLowerCase();

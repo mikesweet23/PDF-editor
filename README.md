@@ -37,7 +37,7 @@ When ADI Markup is served over https, for example with GitHub Pages (**Settings 
 | Open | PDF (all pages), JPEG, PNG, TIFF (including multi-page TIFFs, LZW/Deflate/JPEG/CCITT), WebP, GIF, BMP and saved `.adimarkup.json` projects. Drag and drop or use **Open**. Images can also be dropped onto an open drawing to place them on the page. |
 | Scale | Use the **No scale / Scale** button at the bottom. Either type the drawing scale (1:50, 1:100…) for PDFs, or draw along a known dimension and type its length. You can set the scale per page or for all pages. |
 | Measure | Length, multi-point run (total length), and area (m² plus perimeter). Choose mm or m. Page totals appear on the Markups tab. |
-| Draw | Line, arrow, rectangle, ellipse, polygon and freehand. Shift gives straight lines and squares. Measuring tools snap to markup end points. |
+| Draw | Line, arrow, rectangle, ellipse, polygon and freehand. **Straight lines lock to 0°, 45° or 90° by default** (lines, arrows, measuring, scale ruler, callout leaders, polygon, run, area and pipe lines, both when drawing and when dragging an end point). **Hold Alt for any angle.** Lines still snap exactly onto existing end points. You can turn the default off in Settings. Shift draws squares and circles. |
 | Cloud markup | A "bubbly" cloud drawn as a box or an ellipse/circle, with its own outline and fill colour and an attached note. Use it to flag an area for change, an instruction or documentation. Optional rev tag. Double-click a cloud to add or edit its note. |
 | Colours and rotation | Every shape has an outline colour, plus a fill colour with strength (none, light, medium, solid). Rotate any selected markup by dragging the round handle above it (Shift snaps to 15°), with the ⟲/⟳ buttons, by typing an angle, or with `[` and `]`. |
 | Colour code | Swatches with meanings (red = remove, green = new, etc.), which you can edit in Settings. The **Colour key** tool places a legend on the drawing. |
@@ -81,6 +81,7 @@ When ADI Markup is served over https, for example with GitHub Pages (**Settings 
 | Del | Delete the selected markup |
 | Arrow keys | Nudge the selected markup |
 | `[` / `]` | Rotate the selected markup 15° (with Shift: 90°) |
+| Alt (hold) | Draw or drag straight lines at any angle; without it they lock to 0° / 45° / 90° |
 | Mouse wheel / + / − / 0 | Zoom / zoom in / zoom out / fit page |
 | Page Up / Page Down | Change page |
 
