@@ -349,6 +349,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   <button class="sbtn" id="pgPrev" title="Previous page (Page Up)">‹</button>
   <span id="pgInfo">–</span>
   <button class="sbtn" id="pgNext" title="Next page (Page Down)">›</button>
+  <button class="sbtn" id="pgAdd" title="Add a blank page after this one">+ Page</button>
   <span style="width:6px"></span>
   <button class="sbtn" id="zOut" title="Zoom out (-)">−</button>
   <span id="zoomPct">100%</span>
@@ -368,7 +369,9 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   </div>
   <div class="tab" id="tab-pages">
     <div class="row">
-      <button class="btn" id="btnRotate" title="Rotate this page 90° clockwise">↻ Rotate page</button>
+      <button class="btn" id="btnRotate" title="Rotate this page 90° clockwise">↻ Rotate</button>
+      <button class="btn" id="btnAddPage" title="Add a blank page after this one">+ Add page</button>
+      <button class="btn danger" id="btnDelPage" title="Delete this page">Delete page</button>
     </div>
     <div class="thumbs" id="thumbs"><div class="muted">No document open.</div></div>
   </div>
@@ -686,6 +689,8 @@ function symKit(c, col){
     act: label => { K.ln(0, 0, 0, -0.85); K.rect(-0.48, -1.45, 0.96, 0.6); K.txt(label, 0, -1.15, label.length > 1 ? 0.36 : 0.44); },
     // two valves with an intermediate (bleed) chamber and a bleed valve draining from the middle
     twinBleed: () => { K.ln(-0.6,0,0.6,0); K.bowAt(-1.05,0.45,0.42); K.bowAt(1.05,0.45,0.42); K.circ(0,0,0.08,col); K.ln(0,0,0,0.5); poly([[-0.24,0.5],[0.24,0.5],[0,0.82]]); poly([[-0.24,1.14],[0.24,1.14],[0,0.82]]); K.ln(0,1.14,0,1.3); K.arr(0,1.3,0,1.56,0.2); },
+    // DRV body: valve with the handwheel stem coming off the sloping (upper-left) face, leaning in towards the centre
+    drvBody: () => { K.bow(); K.ln(-0.55,-0.33,-0.3,-0.98); K.ln(-0.58,-1.09,-0.02,-0.87); },
     bowAt: (cx, w, h) => { poly([[cx-w,-h],[cx-w,h],[cx,0]]); poly([[cx+w,-h],[cx+w,h],[cx,0]]); },
     fanBlades: (cx, cy, r) => { [0, 2.1, 4.2].forEach(a0 => { c.beginPath(); c.moveTo(cx, cy); c.quadraticCurveTo(cx + r*Math.cos(a0+0.5), cy + r*Math.sin(a0+0.5), cx + r*Math.cos(a0), cy + r*Math.sin(a0)); c.stroke(); }); K.circ(cx, cy, r*0.18, col); },
     pumpIn: (cx, cy, r) => { K.circ(cx, cy, r); poly([[cx + r, cy],[cx - r*0.5, cy + r*0.866],[cx - r*0.5, cy - r*0.866]], true, null); },
@@ -702,8 +707,8 @@ const SYMS = [
   {id:'bfly', g:'Valves', n:'Butterfly valve', s:'Butterfly valve', k:'isolation', b:[-0.62,-0.66,0.62,0.66], d:K => { K.ln(-0.5,-0.6,-0.5,0.6); K.ln(0.5,-0.6,0.5,0.6); K.circ(0,0,0.3); K.ln(-0.36,0.36,0.36,-0.36); }},
   {id:'globe', g:'Valves', n:'Globe valve', s:'Globe valve', k:'regulating', b:VALVE_B, d:K => { K.bow(); K.circ(0, 0, 0.2, K.col); }},
   {id:'nrv', g:'Valves', n:'Non-return (check) valve', s:'Non-return valve', k:'nrv check', b:[-1,-1.25,1,1.25], d:K => { K.bow(); K.arr(-0.6,-0.95,0.65,-0.95,0.3); K.txt('NRV',0,0.98,0.36); }},
-  {id:'drv', g:'Valves', n:'Double regulating valve (DRV)', s:'DRV', k:'double regulating balancing', b:[-1,-1.42,1,0.62], d:K => { K.bow(); K.circ(0,0,0.18,K.col); K.ln(0,0,0,-0.72); K.ln(-0.42,-0.72,0.42,-0.72); K.txt('DRV',0,-1.12,0.36); }},
-  {id:'comm', g:'Valves', n:'Commissioning set (DRV + orifice)', s:'Commissioning set', k:'fodrv orifice balancing commissioning station', b:[-1,-1.42,2.2,0.62], d:K => { K.bow(); K.circ(0,0,0.18,K.col); K.ln(0,0,0,-0.72); K.ln(-0.42,-0.72,0.42,-0.72); K.txt('DRV',0,-1.12,0.36); K.ln(1,0,2.15,0); K.ln(1.5,-0.5,1.5,0.5); K.ln(1.66,-0.5,1.66,0.5); [1.2,1.96].forEach(x => { K.ln(x,0,x,-0.62); K.circ(x,-0.82,0.2); K.circ(x,-0.82,0.07,K.col); }); }},
+  {id:'drv', g:'Valves', n:'Double regulating valve (DRV)', s:'DRV', k:'double regulating balancing', b:[-1,-1.22,1.05,0.62], d:K => { K.drvBody(); K.txt('DRV',0.55,-0.92,0.34); }},
+  {id:'comm', g:'Valves', n:'Commissioning set (DRV + orifice)', s:'Commissioning set', k:'fodrv orifice balancing commissioning station', b:[-1,-1.22,2.2,0.62], d:K => { K.drvBody(); K.txt('DRV',0.4,-0.92,0.3); K.ln(1,0,2.15,0); K.ln(1.5,-0.5,1.5,0.5); K.ln(1.66,-0.5,1.66,0.5); [1.2,1.96].forEach(x => { K.ln(x,0,x,-0.62); K.circ(x,-0.82,0.2); K.circ(x,-0.82,0.07,K.col); }); }},
   {id:'drainv', g:'Valves', n:'Drain valve (on branch)', s:'Drain valve', k:'drain valve branch', b:[-0.45,-0.12,0.45,1.62], d:K => { K.tee(); K.ln(0,0,0,0.4); K.poly([[-0.4,0.4],[0.4,0.4],[0,0.9]]); K.poly([[-0.4,1.4],[0.4,1.4],[0,0.9]]); K.ln(0,1.4,0,1.5); K.ln(-0.3,1.5,0.3,1.5); K.ln(-0.3,1.6,0.3,1.6); }},
   {id:'tundish', g:'Valves', n:'Drain point to waste (tundish)', s:'Drain to waste', k:'tundish drain waste discharge', b:[-0.6,-0.12,0.6,1.85], d:K => { K.tee(); K.ln(0,0,0,0.75); K.poly([[-0.55,0.95],[0.55,0.95],[0.16,1.38],[0.16,1.8],[-0.16,1.8],[-0.16,1.38]]); }},
   {id:'drain', g:'Valves', n:'Drain cock', s:'Drain cock', k:'drain off dop', b:[-0.45,-0.12,0.45,1.75], d:K => { K.tee(); K.ln(0,0,0,0.45); K.poly([[-0.4,0.45],[0.4,0.45],[0,0.95]]); K.poly([[-0.4,1.45],[0.4,1.45],[0,0.95]]); K.ln(0,1.45,0,1.7); K.ln(-0.22,1.7,0.22,1.7); }},
@@ -763,7 +768,6 @@ const SYMS = [
   {id:'dcv', g:'Valves', n:'Double check valve (with bleed)', s:'Double check', k:'dcv double check backflow wras bleed', b:[-1.55,-1.35,1.55,1.6], d:K => { K.twinBleed(); K.arr(-1.3,-0.78,1.3,-0.78,0.26); K.txt('DCV',0,-1.12,0.3); }},
   {id:'dbb', g:'Valves', n:'Double block and bleed valve', s:'Double block & bleed', k:'dbb double block bleed isolation', b:[-1.55,-1.05,1.55,1.6], d:K => { K.twinBleed(); K.txt('DBB',0,-0.8,0.32); }},
   {id:'solenoid', g:'Valves', n:'Solenoid valve', s:'Solenoid valve', k:'solenoid valve electric', b:[-1,-1.42,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.75); K.rect(-0.42,-1.35,0.84,0.6); K.txt('S',0,-1.05,0.42); }},
-  {id:'float', g:'Valves', n:'Float valve', s:'Float valve', k:'float valve ball cock tank inlet', b:[-1,-1.35,2.1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.5); K.ln(0,-0.5,1.5,-0.95); K.circ(1.75,-1.0,0.3); }},
   {id:'flushbyp', g:'Valves', n:'Flushing bypass (pre-commission cleaning)', s:'Flushing bypass', k:'flushing bypass cleaning temporary', b:[-1.35,-2.0,1.35,0.12], d:K => { K.ln(-1.2,0,1.2,0); K.circ(-1.2,0,0.08,K.col); K.circ(1.2,0,0.08,K.col); K.dashed(() => { K.poly([[-1.2,0],[-1.2,-1.1],[-0.55,-1.1]], false, null); K.poly([[0.55,-1.1],[1.2,-1.1],[1.2,0]], false, null); }); K.bowAt(0,0.55,0.35); K.c.save(); K.c.translate(0,-1.1); K.bowAt(0,0.55,0.35); K.c.restore(); K.txt('FLUSHING',0,-1.75,0.28); }},
   // Water treatment
   {id:'airsep', g:'Water treatment', n:'Air separator', s:'Air separator', k:'air separator deaerator vent', b:[-1.1,-1.85,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.0,0.4); K.txt('AS',0,-0.1,0.4); K.arr(0,-1.1,0,-1.8,0.25); }},
@@ -808,7 +812,7 @@ const SYMS = [
 const SYM_BY_ID = Object.fromEntries(SYMS.map(x => [x.id, x]));
 const SYM_GROUPS = ['Valves','Control valves','Pumps & ancillaries','Water treatment','Plant & equipment','Heat emitters & terminals','Ventilation & air conditioning','Sensors & controls','Pipework'];
 /* Tag prefixes used when tags are numbered automatically (IV1, IV2, P1…). */
-const SYM_PREFIX = {iso:'IV', ball:'BLV', bfly:'BFV', globe:'GV', nrv:'NRV', drv:'DRV', comm:'CS', drainv:'DV', tundish:'TD', drain:'DC', relief:'SV', lock:'LS', prv:'PRV', trv:'TRV', tmv:'TMV', dcv:'DCV', dbb:'DBB', solenoid:'SOV', float:'FV', flushbyp:'FB',
+const SYM_PREFIX = {iso:'IV', ball:'BLV', bfly:'BFV', globe:'GV', nrv:'NRV', drv:'DRV', comm:'CS', drainv:'DV', tundish:'TD', drain:'DC', relief:'SV', lock:'LS', prv:'PRV', trv:'TRV', tmv:'TMV', dcv:'DCV', dbb:'DBB', solenoid:'SOV', flushbyp:'FB',
   cv2:'CV', mix3:'CV', div3:'CV', zone:'ZV', picv:'PICV', dpcv:'DPCV',
   pump:'P', pump2:'P', strainer:'ST', bypass:'BPV', aav:'AAV', expv:'EV', fm:'FM', hm:'HM',
   dirtsep:'DS', airsep:'AS', airdirt:'ADS', llh:'LLH', magfilter:'MF', sidestream:'SSF', degasser:'VD', dosing:'DOS',
@@ -1431,21 +1435,76 @@ function openNewDialog(){
       const nc = $('#nClose'); if (nc) nc.onclick = async () => { closeModal(); closeDoc(); };
     });
 }
+function drawPdfGrid(pg, w, h, grid){   // w, h in mm
+  const {rgb} = PDFLib, pt = v => v*72/25.4, minor = rgb(0.9, 0.92, 0.95), major = rgb(0.78, 0.82, 0.88), every = grid === 5 ? 10 : 5;
+  for (let i = 1; i*grid < w; i++){ const m = i % every === 0; pg.drawLine({start:{x:pt(i*grid), y:0}, end:{x:pt(i*grid), y:pt(h)}, thickness:m ? 0.5 : 0.25, color:m ? major : minor}); }
+  for (let i = 1; i*grid < h; i++){ const m = i % every === 0; pg.drawLine({start:{x:0, y:pt(i*grid)}, end:{x:pt(w), y:pt(i*grid)}, thickness:m ? 0.5 : 0.25, color:m ? major : minor}); }
+}
+function whiteCanvas(w, h){ const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w)); cv.height = Math.max(1, Math.round(h)); const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); return cv; }
+/* Adds a blank page (same size and scale as the current one) after the current page. */
+async function addBlankPage(){
+  if (!S.doc) return;
+  commitEditor(); cancelDrawing();
+  const d = S.doc, ref = cur(), at = S.cur + 1;
+  try {
+    showBusy('Adding page…');
+    let np;
+    if (d.type === 'pdf'){
+      const pp = await S.pdf.getPage(S.cur + 1), base = pp.getViewport({scale:1, rotation:0});
+      const {PDFDocument} = PDFLib, out = await PDFDocument.load(d.bytes, {ignoreEncryption:true});
+      const pg = out.insertPage(at, [base.width, base.height]);
+      if (d.blank && d.blank.grid > 0) drawPdfGrid(pg, base.width*25.4/72, base.height*25.4/72, d.blank.grid);
+      d.bytes = await out.save();
+      S.pdf = await pdfjsLib.getDocument({data: d.bytes.slice()}).promise;
+      np = newPage(base.width, base.height);
+    } else {
+      const w = ref.w, h = ref.h;
+      S.imgs.splice(at, 0, whiteCanvas(w, h));
+      d.blankSizes = d.blankSizes || [];
+      d.blankSizes.splice(at - d.srcPages, 0, [w, h]);
+      np = newPage(w, h);
+    }
+    np.mm = ref.mm; np.scaleLabel = ref.scaleLabel; np.ratio = ref.ratio;
+    d.pages.splice(at, 0, np);
+    S.undo = []; S.redo = []; updateUndoBtns();
+    setDirty(true); scheduleAutosave();
+    buildThumbs(); gotoPage(at);
+    toast(`✓ Blank page ${at + 1} added.`, 3000, 'ok');
+  } catch (e) { console.error(e); toast('Could not add a page: ' + (e.message || e), 6000, 'err'); }
+  finally { hideBusy(); }
+}
+async function deletePage(){
+  if (!S.doc) return;
+  const d = S.doc, i = S.cur;
+  if (d.pages.length < 2){ toast('A document needs at least one page.'); return; }
+  if (d.type !== 'pdf' && i < d.srcPages){ toast('Only pages you added can be deleted from an image document.'); return; }
+  const n = d.pages[i].anns.length;
+  if (!(await ask('Delete page ' + (i + 1) + '?', n ? `This page and its ${n} markup${n > 1 ? 's' : ''} will be removed. This can't be undone.` : 'This page will be removed. This can\'t be undone.', 'Delete page', 'Cancel'))) return;
+  commitEditor(); cancelDrawing();
+  try {
+    if (d.type === 'pdf'){
+      const {PDFDocument} = PDFLib, out = await PDFDocument.load(d.bytes, {ignoreEncryption:true});
+      out.removePage(i); d.bytes = await out.save();
+      S.pdf = await pdfjsLib.getDocument({data: d.bytes.slice()}).promise;
+    } else { S.imgs.splice(i, 1); d.blankSizes.splice(i - d.srcPages, 1); }
+    d.pages.splice(i, 1);
+    S.undo = []; S.redo = []; updateUndoBtns();
+    setDirty(true); scheduleAutosave();
+    buildThumbs(); gotoPage(Math.min(i, d.pages.length - 1));
+    toast('Page deleted.', 3000);
+  } catch (e) { console.error(e); toast('Could not delete the page: ' + (e.message || e), 6000, 'err'); }
+}
 async function createBlank({size, orient, scale, grid, name}){
   try {
     const {PDFDocument, rgb} = PDFLib, pt = v => v*72/25.4;
     let [w, h] = PAPER[size] || PAPER.A3; if (orient === 'landscape') [w, h] = [h, w];
     const pdf = await PDFDocument.create(), pg = pdf.addPage([pt(w), pt(h)]);
-    if (grid > 0){
-      const minor = rgb(0.9, 0.92, 0.95), major = rgb(0.78, 0.82, 0.88);
-      for (let i = 1; i*grid < w; i++){ const m = i % (grid === 5 ? 10 : 5) === 0; pg.drawLine({start:{x:pt(i*grid), y:0}, end:{x:pt(i*grid), y:pt(h)}, thickness:m ? 0.5 : 0.25, color:m ? major : minor}); }
-      for (let i = 1; i*grid < h; i++){ const m = i % (grid === 5 ? 10 : 5) === 0; pg.drawLine({start:{x:0, y:pt(i*grid)}, end:{x:pt(w), y:pt(i*grid)}, thickness:m ? 0.5 : 0.25, color:m ? major : minor}); }
-    }
+    if (grid > 0) drawPdfGrid(pg, w, h, grid);
     pdf.setTitle(name); pdf.setCreator('ADI Markup');
     const bytes = await pdf.save();
     S.dirty = false;
     await loadDoc({type:'pdf', mime:'application/pdf', bytes, name});
-    S.fileHandle = null;
+    S.fileHandle = null; S.doc.blank = {grid};
     if (scale > 0) S.doc.pages.forEach(p => { p.mm = 25.4/72*scale; p.scaleLabel = `1:${scale}`; p.ratio = scale; });
     updateAll();
     toast(`✓ Blank ${size} ${orient} canvas ready${scale > 0 ? ' at 1:' + scale : ''}. Draw away – straight lines lock to 45°/90° (Alt for any angle).`, 6000, 'ok');
@@ -1472,10 +1531,12 @@ async function loadDoc(src, saved){
       const url = URL.createObjectURL(new Blob([src.bytes], {type: src.mime}));
       if (src.mime === 'image/tiff'){ showBusy('Reading TIFF…'); S.imgs = await decodeTiff(src.bytes); }
       else S.imgs = [await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('Image could not be read')); im.src = url; })];
+      doc.srcPages = S.imgs.length; doc.blankSizes = [];
+      if (saved && Array.isArray(saved.blankSizes)) saved.blankSizes.forEach(([w, h]) => { S.imgs.push(whiteCanvas(w, h)); doc.blankSizes.push([w, h]); });
       S.imgs.forEach(im => doc.pages.push(newPage(im.naturalWidth || im.width, im.naturalHeight || im.height)));
     }
     if (saved){
-      Object.assign(doc, {name:saved.name ?? doc.name, date:saved.date || doc.date, initials:saved.initials ?? doc.initials, rev:saved.rev ?? '', footer:saved.footer ?? doc.footer, units:saved.units || doc.units, assets:saved.assets || {}});
+      Object.assign(doc, {name:saved.name ?? doc.name, date:saved.date || doc.date, initials:saved.initials ?? doc.initials, rev:saved.rev ?? '', footer:saved.footer ?? doc.footer, units:saved.units || doc.units, assets:saved.assets || {}, blank:saved.blank || null});
       (saved.pages || []).forEach((sp, i) => { const p = doc.pages[i]; if (!p) return; p.rot = sp.rot || 0; p.mm = sp.mm || null; p.scaleLabel = sp.scaleLabel || ''; p.schedOff = !!sp.schedOff; p.anns = sp.anns || []; });
     }
     S.doc = doc; S.cur = 0; S.sel = null; S.undo = []; S.redo = []; S.dirty = !!saved && !!saved._autosave;
@@ -1497,7 +1558,7 @@ function buildProject(binary){
   const assets = {}; used.forEach(id => { if (d.assets[id]) assets[id] = d.assets[id]; });
   return {
     app:'ADI Markup', format:1, savedAt:new Date().toISOString(),
-    name:d.name, date:d.date, initials:d.initials, rev:d.rev, footer:d.footer, units:d.units,
+    name:d.name, date:d.date, initials:d.initials, rev:d.rev, footer:d.footer, units:d.units, blank:d.blank || null, blankSizes:d.blankSizes || [],
     source:{type:d.type, mime:d.mime, data: binary ? d.bytes : bytesToB64(d.bytes)},
     pages: JSON.parse(JSON.stringify(d.pages.map(p => ({rot:p.rot, mm:p.mm, scaleLabel:p.scaleLabel, schedOff:p.schedOff, anns:p.anns})), strip)),
     assets,
@@ -2663,6 +2724,8 @@ function init(){
   $('#zFit').onclick = fitPage; $('#zWidth').onclick = fitWidth;
   $('#scaleBtn').onclick = () => S.doc && openScaleModal(); $('#dScaleBtn').onclick = () => S.doc && openScaleModal();
   $('#btnRotate').onclick = rotatePage;
+  $('#btnAddPage').onclick = $('#pgAdd').onclick = () => S.doc ? addBlankPage() : toast('Open a drawing or start a blank canvas first.');
+  $('#btnDelPage').onclick = deletePage;
 
   // tabs
   $$('.tabs button').forEach(b => b.onclick = () => { $$('.tabs button').forEach(x => x.classList.toggle('on', x === b)); $$('.tab').forEach(t => t.hidden = t.id !== 'tab-' + b.dataset.tab); });
