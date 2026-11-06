@@ -92,6 +92,24 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 .sig-pad canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .sig-pad .ph{position:absolute;left:26px;bottom:20px;color:#8792a4;font-size:12px;pointer-events:none}
 .sig-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sym-panel{position:absolute;top:10px;left:10px;bottom:10px;width:min(286px,calc(100% - 20px));background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.28);display:flex;flex-direction:column;z-index:6;overflow:hidden}
+.sym-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.sym-head b{flex:1;color:var(--heading);font-size:15px}
+.sym-x{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;padding:2px 6px;border-radius:6px}
+.sym-x:hover{background:var(--bg)}
+.sym-tools{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.sym-tools input[type=search]{border:1px solid var(--border);border-radius:7px;padding:7px 9px;background:var(--field);color:var(--text);width:100%}
+.sym-row{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.sym-row .pbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sym-row input[type=range]{flex:1;min-width:70px}
+.sym-scroll{flex:1;overflow-y:auto;padding:2px 12px 12px}
+.sym-g{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--heading);margin:12px 0 6px}
+.sym-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sym-btn{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--border);background:#fff;color:#1b2533;border-radius:8px;padding:5px 3px 6px;font-size:10.5px;line-height:1.2;text-align:center;min-height:72px}
+.sym-btn:hover{border-color:var(--accent)}
+.sym-btn.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.sym-btn canvas{width:64px;height:40px;display:block}
+.sym-help{font-size:12px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--border);margin:0}
 .sig-note{background:var(--bg);border-radius:8px;padding:9px 11px;font-size:12.5px;color:var(--muted);margin:12px 0 0}
 #pColor,#pFillColor{width:28px;height:26px;border:1px solid var(--border);border-radius:6px;padding:1px;background:var(--field)}
 .pbtn{border:1px solid var(--border);background:var(--field);border-radius:6px;padding:4px 10px;color:var(--text)}
@@ -258,6 +276,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="4" max="60" step="1"></label>
   <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
+  <label class="prop" data-p="tag">Tag <input type="text" id="pTag" size="8" maxlength="24" placeholder="e.g. V1, 25mm"></label>
   <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
   <div class="prop" data-p="sig"><div class="sigs" id="sigList"></div><button class="pbtn" id="sigNew">+ New signature</button><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="sigDate"> Add “Signed” date</label></div>
   <span class="prop" data-p="rot">Rotate
@@ -275,6 +294,16 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 
 <main id="view">
   <canvas id="stage"></canvas>
+  <div id="symPanel" class="sym-panel" hidden>
+    <div class="sym-head"><b>HVAC symbols</b><button class="sym-x" id="symClose" title="Close (Esc)" aria-label="Close symbols">×</button></div>
+    <div class="sym-tools">
+      <input type="search" id="symSearch" placeholder="Search, e.g. valve, pump, sensor" aria-label="Search symbols">
+      <div class="sym-row">Pipe runs <button class="pbtn on" data-symdir="0" title="Horizontal pipe">⟷ Horizontal</button><button class="pbtn" data-symdir="90" title="Vertical pipe">↕ Vertical</button></div>
+      <div class="sym-row">Size <input type="range" id="symSize" min="40" max="300" step="10" value="100" aria-label="Symbol size"><span id="symSizeLbl">100%</span></div>
+    </div>
+    <div class="sym-scroll" id="symGrid"></div>
+    <p class="sym-help">Pick a symbol, then click on the pipework to place it – keep clicking to add more. <b>[</b> <b>]</b> rotate, colours are in the bar above.</p>
+  </div>
   <div id="welcome">
     <div class="welcome-card">
       <h1>ADI Markup</h1>
@@ -399,6 +428,7 @@ const IC = {
   signature:'<path d="M3 16c2-4 4-9 6-9 2.5 0-1.5 9 1 9 2 0 2.5-4 4-4s1 3 3 3h4"/><path d="M3 20h18"/>',
   legend:'<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
   marker:'<path d="M15 4l5 5-8 8H7v-5zM4 21h9"/>',
+  symbols:'<path d="M2 12h3M19 12h3"/><path d="M5 7v10l7-5zM19 7v10l-7-5z"/><path d="M12 12V5M9 4h6"/>',
   hlbox:'<rect x="3" y="7" width="18" height="10" rx="1" fill="currentColor" fill-opacity=".3"/>',
   whiteout:'<path d="M16 3l5 5-11 11H5l-3-3zM9 9l6 6M13 21h8"/>',
   movearea:'<path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6M12 8v8M8 12h8"/>',
@@ -411,12 +441,13 @@ const TOOLS = [
   ['select','V','Select / move'],['pan','H','Pan (or hold Space)'],null,
   ['line','L','Line'],['arrow','A','Arrow'],['rect','R','Rectangle'],['ellipse','E','Ellipse / circle'],['polygon','P','Polygon'],['pen','F','Freehand'],['cloud','C','Cloud markup (box or ellipse + note)'],null,
   ['text','T','Text'],['callout','O','Callout (arrow + note)'],['stamp','S','Stamp'],['signature','G','Sign – place your saved signature'],['image','I','Image (or paste)'],['legend','K','Colour key'],null,
+  ['symbols','Q','HVAC symbols – valves, pumps, sensors'],null,
   ['marker','Y','Highlighter'],['hlbox','B','Highlight box'],null,
   ['whiteout','W','White-out (cover)'],['movearea','X','Move part of drawing'],null,
   ['calibrate','','Set scale from a known dimension'],['measure','M','Measure length'],['run','N','Measure run (multi-point)'],['area','U','Measure area'],
 ];
-const typeName = a => a.sig ? 'Signature' : (TYPE_NAME[a.type] || a.type);
-const TYPE_NAME = {signature:'Sign', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
+const typeName = a => a.sig ? 'Signature' : a.type === 'sym' ? ((SYM_BY_ID[a.sym] || {}).n || 'HVAC symbol') : (TYPE_NAME[a.type] || a.type);
+const TYPE_NAME = {signature:'Sign', symbols:'HVAC symbols', sym:'HVAC symbol', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
 const HINTS = {
   select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
   pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
@@ -429,6 +460,7 @@ const HINTS = {
   image:'Choose an image to insert. You can also paste an image with Ctrl+V.',
   signature:'Click on the drawing to place your signature. Drag a corner to resize. Pick, add or delete signatures above.',
   legend:'Click to place a colour key. Edit the meanings in Settings.',
+  symbols:'Pick a symbol in the panel, then click on the pipework to place it. Keep clicking to add more. [ ] rotate.',
   marker:'Drag over items to highlight them.', hlbox:'Drag a box to highlight an area.',
   whiteout:'Drag to cover part of the drawing. Then add text on top to “edit” it.',
   movearea:'Drag a box around the part of the drawing to move – then drag it to its new position.',
@@ -442,7 +474,7 @@ const PROPS = {
   rect:['color','lw','dash','fill','opacity'], ellipse:['color','lw','dash','fill','opacity'], polygon:['color','lw','dash','fill','opacity'],
   cloud:['color','lw','fill','shape','fs','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
   image:['opacity'], signature:['sig'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
-  patch:[], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
+  patch:[], sym:['color','lw','fs'], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
 };
 const STAMPS = {
   'APPROVED':'#2e7d32','APPROVED AS NOTED':'#ef6c00','REVISED':'#1565c0','FOR COMMENT':'#1565c0','FOR INFORMATION':'#455a64',
@@ -455,12 +487,13 @@ const DEF_STYLES = {
   cloud:{color:'#e53935',lw:3,rev:'',fill:'none',fillColor:'#ffeb3b',shape:'box',fs:11}, text:{color:'#1565c0',fs:12,tfill:'none'}, callout:{color:'#1565c0',lw:2,fs:11},
   stamp:{color:STAMPS['APPROVED'],stamp:'APPROVED',opacity:0.9}, image:{opacity:1}, signature:{}, legend:{fs:10},
   marker:{color:'#ffeb3b',lw:14,opacity:0.4}, hlbox:{color:'#ffeb3b',opacity:0.35}, whiteout:{color:'#ffffff'}, patch:{},
+  sym:{color:'#e53935',lw:2,fs:9},
   measure:{color:'#6a1b9a',lw:2,fs:10}, run:{color:'#6a1b9a',lw:2,fs:10}, area:{color:'#6a1b9a',lw:2,fs:10,fill:'tint'},
 };
 const DRAG_TOOLS = new Set(['line','arrow','rect','ellipse','cloud','hlbox','whiteout','measure','calibrate','movearea','callout']);
 const CLICK_TOOLS = new Set(['polygon','run','area']);
 const FREE_TOOLS = new Set(['pen','marker']);
-const toolType = t => t === 'movearea' ? 'patch' : (t === 'select' || t === 'pan' || t === 'calibrate') ? null : t;
+const toolType = t => t === 'movearea' ? 'patch' : t === 'symbols' ? 'sym' : (t === 'select' || t === 'pan' || t === 'calibrate') ? null : t;
 
 /* ---------- State ---------- */
 const S = {
@@ -514,6 +547,7 @@ function annValue(a, page){
   if (a.type === 'text' || a.type === 'callout' || a.type === 'cloud') return (a.text || '').replace(/\s+/g,' ');
   if (a.type === 'stamp') return a.stamp;
   if (a.sigLabel) return a.sigLabel;
+  if (a.type === 'sym') return a.tag || '';
   return '';
 }
 const legendLabel = c => { const e = settings.legend.find(l => l.c.toLowerCase() === String(c||'').toLowerCase()); return e ? e.label : ''; };
@@ -594,12 +628,89 @@ function textBlock(c, a, x, y, fontPx, opts){
   return b;
 }
 
+/* ---------- HVAC symbol library ----------
+   Each symbol is drawn in its own units: the pipe runs along y = 0 and the
+   insertion point (where you click) is (0,0). b = [x0, y0, x1, y1] bounds. */
+function symKit(c, col){
+  const W = '#ffffff';
+  const poly = (pts, close = true, fill = W) => { c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); if (close) c.closePath(); if (fill){ c.fillStyle = fill; c.fill(); } c.stroke(); };
+  const K = {
+    c, col, poly,
+    ln: (x1, y1, x2, y2) => { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); },
+    circ: (x, y, r, fill = W) => { c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); if (fill){ c.fillStyle = fill; c.fill(); } c.stroke(); },
+    rect: (x, y, w, h, fill = W) => poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]], true, fill),
+    rrect: (x, y, w, h, r) => { roundRect(c, x, y, w, h, r); c.fillStyle = W; c.fill(); c.stroke(); },
+    bow: (w = 1, h = 0.6) => { poly([[-w,-h],[-w,h],[0,0]]); poly([[w,-h],[w,h],[0,0]]); },
+    txt: (str, x, y, size) => { c.save(); c.scale(0.01, 0.01); c.fillStyle = col; c.font = `bold ${size*100}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(str, x*100, y*100 + size*6); c.restore(); },
+    arr: (x1, y1, x2, y2, hs = 0.3) => { K.ln(x1, y1, x2, y2); const a = Math.atan2(y2-y1, x2-x1); poly([[x2,y2],[x2-hs*Math.cos(a-0.45), y2-hs*Math.sin(a-0.45)],[x2-hs*Math.cos(a+0.45), y2-hs*Math.sin(a+0.45)]], true, col); },
+    tee: () => K.circ(0, 0, 0.1, col),
+    act: label => { K.ln(0, 0, 0, -0.85); K.rect(-0.48, -1.45, 0.96, 0.6); K.txt(label, 0, -1.15, label.length > 1 ? 0.36 : 0.44); },
+    bubble: label => { K.tee(); K.ln(0, 0, 0, -0.7); K.circ(0, -1.3, 0.6); if (label) K.txt(label, 0, -1.3, label.length > 1 ? 0.42 : 0.6); },
+  };
+  return K;
+}
+const BUBBLE_B = [-0.66, -1.96, 0.66, 0.12], VALVE_B = [-1, -0.62, 1, 0.62];
+const SYMS = [
+  // Valves
+  {id:'iso', g:'Valves', n:'Isolating valve', s:'Isolating valve', k:'gate isolation shut off', b:VALVE_B, d:K => K.bow()},
+  {id:'ball', g:'Valves', n:'Ball valve', s:'Ball valve', k:'isolation', b:VALVE_B, d:K => { K.bow(); K.circ(0, 0, 0.27); }},
+  {id:'bfly', g:'Valves', n:'Butterfly valve', s:'Butterfly valve', k:'isolation', b:[-0.62,-0.66,0.62,0.66], d:K => { K.ln(-0.5,-0.6,-0.5,0.6); K.ln(0.5,-0.6,0.5,0.6); K.circ(0,0,0.3); K.ln(-0.36,0.36,0.36,-0.36); }},
+  {id:'globe', g:'Valves', n:'Globe valve', s:'Globe valve', k:'regulating', b:VALVE_B, d:K => { K.bow(); K.circ(0, 0, 0.2, K.col); }},
+  {id:'nrv', g:'Valves', n:'Non-return (check) valve', s:'Non-return valve', k:'nrv check', b:VALVE_B, d:K => { K.poly([[-1,-0.6],[-1,0.6],[0,0]]); K.poly([[1,-0.6],[1,0.6],[0,0]], true, K.col); }},
+  {id:'drv', g:'Valves', n:'Double regulating valve (DRV)', s:'DRV', k:'double regulating balancing', b:[-1,-0.95,1,0.95], d:K => { K.bow(); K.arr(-0.72, 0.78, 0.74, -0.8, 0.34); }},
+  {id:'comm', g:'Valves', n:'Commissioning set (DRV + orifice)', s:'Commissioning set', k:'fodrv orifice balancing', b:[-1,-1.35,1.95,0.95], d:K => { K.bow(); K.arr(-0.72, 0.78, 0.74, -0.8, 0.34); K.ln(1.3,-0.55,1.3,0.55); K.ln(1.6,-0.55,1.6,0.55); K.ln(1.2,-0.1,1.2,-0.95); K.ln(1.75,-0.1,1.75,-0.95); K.circ(1.2,-1.13,0.17,K.col); K.circ(1.75,-1.13,0.17,K.col); }},
+  {id:'drain', g:'Valves', n:'Drain cock', s:'Drain cock', k:'drain off dop', b:[-0.45,-0.12,0.45,1.75], d:K => { K.tee(); K.ln(0,0,0,0.45); K.poly([[-0.4,0.45],[0.4,0.45],[0,0.95]]); K.poly([[-0.4,1.45],[0.4,1.45],[0,0.95]]); K.ln(0,1.45,0,1.7); K.ln(-0.22,1.7,0.22,1.7); }},
+  {id:'relief', g:'Valves', n:'Safety / pressure relief valve', s:'Safety valve', k:'prv relief safety', b:[-1,-1.4,0.66,1], d:K => { K.poly([[-1,-0.6],[-1,0.6],[0,0]]); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.poly([[0,-0.05],[0.3,-0.25],[-0.3,-0.5],[0.3,-0.75],[-0.3,-1.0],[0,-1.2]], false, null); K.ln(-0.35,-1.25,0.35,-1.25); }},
+  {id:'trv', g:'Valves', n:'Thermostatic radiator valve (TRV)', s:'TRV', k:'radiator thermostatic', b:[-1,-1.55,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.7); K.circ(0,-1.1,0.42); K.txt('T',0,-1.1,0.48); }},
+  // Control valves
+  {id:'cv2', g:'Control valves', n:'2-port control valve', s:'2-port control', k:'motorised actuator two port', b:[-1,-1.5,1,0.62], d:K => { K.bow(); K.act('M'); }},
+  {id:'mix3', g:'Control valves', n:'3-port mixing valve', s:'3-port mixing', k:'three port mixing actuator', b:[-1.75,-1.5,1.75,1.75], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.act('M'); K.arr(-1.72,0,-1.12,0,0.26); K.arr(0,1.72,0,1.12,0.26); K.arr(1.12,0,1.72,0,0.26); }},
+  {id:'div3', g:'Control valves', n:'3-port diverting valve', s:'3-port diverting', k:'three port diverting actuator', b:[-1.75,-1.5,1.75,1.75], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.act('M'); K.arr(-1.72,0,-1.12,0,0.26); K.arr(0,1.12,0,1.72,0.26); K.arr(1.12,0,1.72,0,0.26); }},
+  {id:'picv', g:'Control valves', n:'Pressure independent control valve (PICV)', s:'PICV', k:'picv pressure independent', b:[-1,-1.5,1,0.62], d:K => { K.bow(); K.act('PI'); }},
+  {id:'dpcv', g:'Control valves', n:'Differential pressure control valve (DPCV)', s:'DPCV', k:'differential pressure control', b:[-1,-1.4,2.05,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.72); const c = K.c; c.beginPath(); c.moveTo(-0.55,-0.72); c.arc(0,-0.72,0.55,Math.PI,0); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke(); c.save(); c.setLineDash([0.16,0.12]); K.poly([[0.42,-1.0],[1.9,-1.0],[1.9,0]], false, null); c.restore(); K.circ(1.9,0,0.1,K.col); }},
+  // Pumps & ancillaries
+  {id:'pump', g:'Pumps & ancillaries', n:'Pump', s:'Pump', k:'circulator', b:[-1.05,-1.05,1.05,1.05], d:K => { K.circ(0,0,1); K.poly([[1,0],[-0.5,0.866],[-0.5,-0.866]], true, null); }},
+  {id:'pump2', g:'Pumps & ancillaries', n:'Twin pump (duty/standby)', s:'Twin pump', k:'twin duty standby', b:[-1.05,-2.1,1.05,0.12], d:K => { [0,-1.4].forEach(y => { K.circ(0,y-0.35,0.62); K.poly([[0.62,y-0.35],[-0.31,y+0.19],[-0.31,y-0.89]], true, null); }); K.tee(); }},
+  {id:'strainer', g:'Pumps & ancillaries', n:'Strainer', s:'Strainer', k:'y strainer filter', b:[-0.9,-0.6,0.9,1.15], d:K => { K.ln(-0.8,-0.5,-0.8,0.5); K.ln(0.8,-0.5,0.8,0.5); K.ln(-0.8,0,0.8,0); K.poly([[-0.35,0],[0.05,0],[0.6,0.9],[0.2,0.9]]); K.ln(0.12,1.05,0.72,0.75); }},
+  {id:'flex', g:'Pumps & ancillaries', n:'Flexible connection', s:'Flexible conn.', k:'anti vibration bellows', b:[-1,-0.6,1,0.6], d:K => { K.ln(-0.9,-0.5,-0.9,0.5); K.ln(0.9,-0.5,0.9,0.5); K.poly([[-0.9,0],[-0.7,-0.35],[-0.4,0.35],[-0.1,-0.35],[0.2,0.35],[0.5,-0.35],[0.7,0],[0.9,0]], false, null); }},
+  {id:'aav', g:'Pumps & ancillaries', n:'Automatic air vent (AAV)', s:'Air vent', k:'aav air vent bleed', b:[-0.5,-2.0,0.5,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-0.42,-1.2,0.84,0.7); K.txt('AV',0,-0.85,0.32); K.arr(0,-1.3,0,-1.95,0.26); }},
+  {id:'expv', g:'Pumps & ancillaries', n:'Expansion vessel', s:'Expansion vessel', k:'pressure vessel', b:[-0.7,-2.25,0.7,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rrect(-0.6,-2.15,1.2,1.65,0.45); K.ln(-0.6,-1.32,0.6,-1.32); }},
+  {id:'fm', g:'Pumps & ancillaries', n:'Flow meter', s:'Flow meter', k:'meter', b:[-0.9,-0.6,0.9,0.6], d:K => { K.rect(-0.85,-0.55,1.7,1.1); K.txt('FM',0,0,0.5); }},
+  {id:'hm', g:'Pumps & ancillaries', n:'Heat meter', s:'Heat meter', k:'energy meter', b:[-0.9,-0.6,0.9,0.6], d:K => { K.rect(-0.85,-0.55,1.7,1.1); K.txt('HM',0,0,0.5); }},
+  {id:'reducer', g:'Pumps & ancillaries', n:'Reducer', s:'Reducer', k:'concentric reducer', b:[-0.85,-0.65,0.85,0.65], d:K => K.poly([[-0.8,-0.6],[0.8,-0.3],[0.8,0.3],[-0.8,0.6]])},
+  {id:'cap', g:'Pumps & ancillaries', n:'Capped end', s:'Capped end', k:'blank cap end', b:[-0.9,-0.65,0.4,0.65], d:K => { K.ln(-0.9,0,0.2,0); K.ln(0.2,-0.6,0.2,0.6); K.ln(0.34,-0.6,0.34,0.6); }},
+  {id:'flow', g:'Pumps & ancillaries', n:'Flow direction arrow', s:'Flow arrow', k:'direction', b:[-1,-0.45,1,0.45], d:K => K.arr(-1,0,1,0,0.7)},
+  // Sensors & instruments
+  {id:'tp', g:'Sensors & instruments', n:'Test point', s:'Test point', k:'binder pressure temperature tapping', b:[-0.35,-1.15,0.35,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.circ(0,-0.8,0.3); K.circ(0,-0.8,0.1,K.col); }},
+  {id:'tsens', g:'Sensors & instruments', n:'Temperature sensor', s:'Temp. sensor', k:'temperature sensor bms', b:BUBBLE_B, d:K => K.bubble('T')},
+  {id:'psens', g:'Sensors & instruments', n:'Pressure sensor', s:'Pressure sensor', k:'pressure transducer', b:BUBBLE_B, d:K => K.bubble('P')},
+  {id:'pswitch', g:'Sensors & instruments', n:'Pressure switch', s:'Pressure switch', k:'pressure switch', b:BUBBLE_B, d:K => K.bubble('PS')},
+  {id:'dps', g:'Sensors & instruments', n:'Differential pressure sensor / switch', s:'Diff. pressure', k:'dp differential pressure', b:BUBBLE_B, d:K => K.bubble('ΔP')},
+  {id:'fswitch', g:'Sensors & instruments', n:'Flow switch', s:'Flow switch', k:'flow switch', b:BUBBLE_B, d:K => K.bubble('FS')},
+  {id:'gauge', g:'Sensors & instruments', n:'Pressure gauge', s:'Pressure gauge', k:'gauge manometer', b:BUBBLE_B, d:K => { K.bubble(''); K.ln(0,-1.3,0.36,-1.62); K.circ(0,-1.3,0.08,K.col); }},
+  {id:'therm', g:'Sensors & instruments', n:'Thermometer', s:'Thermometer', k:'temperature gauge', b:[-0.4,-1.95,0.4,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.35); K.rrect(-0.16,-1.9,0.32,1.5,0.16); K.circ(0,-0.55,0.24,K.col); K.ln(0,-0.75,0,-1.6); }},
+];
+const SYM_BY_ID = Object.fromEntries(SYMS.map(x => [x.id, x]));
+function symScaleOrigin(a){ const def = SYM_BY_ID[a.sym], [x,y,w] = box(a.pts), [x0,y0,x1] = def ? def.b : [0,0,1]; const k = w/(x1-x0 || 1); return {k, o:[x - x0*k, y - y0*k]}; }
+function makeSym(id, p, rot){
+  const def = SYM_BY_ID[id], s = unitOf(cur())*22*(S.symSize || 1), [x0,y0,x1,y1] = def.b;
+  return {id:uid(), type:'sym', sym:id, pts:[[p[0]+x0*s, p[1]+y0*s], [p[0]+x1*s, p[1]+y1*s]], rot:rot || 0, style:{...S.styles.sym}, tag:''};
+}
+function drawSymTag(c, a, page){
+  const u = unitOf(page), f = (a.style.fs || 9)*u*1.6, b = box(a.pts);
+  const cs = boxPts(b).map(q => toWorld(a, q)), xs = cs.map(q => q[0]), ys = cs.map(q => q[1]);
+  const x = (Math.min(...xs) + Math.max(...xs))/2, y = Math.max(...ys) + f*0.2;
+  c.save(); c.globalAlpha = 1; c.setLineDash([]); c.font = `bold ${f}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'top';
+  c.lineJoin = 'round'; c.strokeStyle = '#fff'; c.lineWidth = f*0.28; c.strokeText(a.tag, x, y); c.fillStyle = a.style.color; c.fillText(a.tag, x, y);
+  c.restore();
+}
+
 /* ---------- Rotation ---------- */
-const ROT_TYPES = new Set(['rect','ellipse','cloud','hlbox','whiteout','image','stamp','text','patch','legend']);
+const ROT_TYPES = new Set(['rect','ellipse','cloud','hlbox','whiteout','image','stamp','text','patch','legend','sym']);
 const NO_ROTATE = new Set(['callout']);
 const normAng = r => { r = ((r + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI; return Math.abs(r) < 1e-9 ? 0 : r; };
 function rotAround(p, c, ang){ const s = Math.sin(ang), co = Math.cos(ang), dx = p[0]-c[0], dy = p[1]-c[1]; return [c[0]+dx*co-dy*s, c[1]+dx*s+dy*co]; }
-function rotCenter(a){ if (a.type === 'text' || a.type === 'legend') return a.pts[0]; const [x,y,w,h] = box(a.pts); return [x+w/2, y+h/2]; }
+function rotCenter(a){ if (a.type === 'text' || a.type === 'legend') return a.pts[0]; if (a.type === 'sym') return symScaleOrigin(a).o; const [x,y,w,h] = box(a.pts); return [x+w/2, y+h/2]; }
 const isRot = a => !!a.rot && ROT_TYPES.has(a.type);
 const toLocal = (a, p) => isRot(a) ? rotAround(p, rotCenter(a), -a.rot) : p;
 const toWorld = (a, p) => isRot(a) ? rotAround(p, rotCenter(a), a.rot) : p;
@@ -610,6 +721,7 @@ function drawAnn(c, a, page){
   if (a.type === 'patch'){ c.save(); c.fillStyle = '#fff'; c.fillRect(...a.src); c.restore(); }
   c.save(); applyRot(c, a); drawAnnBody(c, a, page); c.restore();
   if (a.type === 'cloud' && a.pts[2] && (a.text || a._editing)) drawCloudNote(c, a, page);
+  if (a.type === 'sym' && a.tag) drawSymTag(c, a, page);
 }
 function drawCloudNote(c, a, page){
   const u = unitOf(page), st = a.style, fp = (st.fs || 11)*u*1.6, N = a.pts[2];
@@ -698,6 +810,13 @@ function drawAnnBody(c, a, page){
       c.font = `600 100px ${FONT}`; const sw = c.measureText(sub).width/100;
       const f2 = Math.min(h*0.14, (w*0.84)/sw); c.font = `600 ${f2}px ${FONT}`; c.fillText(sub, x+w/2, y+h*0.75);
       a._b = [x,y,w,h];
+      break; }
+    case 'sym': {
+      const def = SYM_BY_ID[a.sym]; if (!def) break;
+      const {k, o} = symScaleOrigin(a);
+      c.translate(o[0], o[1]); c.scale(k, k); c.setLineDash([]);
+      c.strokeStyle = c.fillStyle = st.color; c.lineWidth = Math.max((st.lw || 2)*u/k, 0.02); c.lineJoin = 'round'; c.lineCap = 'round';
+      def.d(symKit(c, st.color));
       break; }
     case 'image': {
       const im = S.imgCache[a.asset]; const b = box(P);
@@ -867,6 +986,7 @@ function draw(){
   for (const a of page.anns) drawAnn(ctx, a, page);
   drawFooter(ctx, page);
   if (S.drawing) drawAnn(ctx, S.drawing, page);
+  if (S.tool === 'symbols' && S.hover && !S.drag && SYM_BY_ID[S.sym]){ const g = makeSym(S.sym, S.hover, S.symRot); g.style.opacity = 0.5; drawAnn(ctx, g, page); }
   // selection
   const sel = getSel();
   if (sel){
@@ -1138,7 +1258,7 @@ async function exportCSV(){
       if (a.type === 'run') len = Math.round(polyLen(a.pts) * p.mm);
       if (a.type === 'area'){ area = (polyArea(a.pts) * p.mm * p.mm / 1e6).toFixed(2); per = Math.round(polyLen(a.pts, true) * p.mm); }
     }
-    const detail = a.type === 'stamp' ? a.stamp : (a.text || '');
+    const detail = a.type === 'stamp' ? a.stamp : a.type === 'sym' ? (a.tag || '') : (a.sigLabel || a.text || '');
     rows.push([d.name, ukDate(d.date), i+1, typeName(a), (a.style && a.style.color) || '', legendLabel(a.style && a.style.color), len, area, per, detail]);
   }));
   const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }).join(',')).join('\r\n');
@@ -1173,6 +1293,8 @@ function setTool(t){
   view.classList.toggle('draw', !['select','pan','text'].includes(t));
   view.classList.toggle('text', t === 'text');
   if (t === 'signature' && !curSig()) setTimeout(openSignatureModal, 0);
+  $('#symPanel').hidden = t !== 'symbols'; S.hover = null;
+  if (t === 'symbols') renderSymGrid();
   if (['measure','run','area'].includes(t) && cur() && !cur().mm) toast('This page has no scale yet – click “No scale” at the bottom (or the ruler tool) to set one.', 5000);
   updateProps(); updateHint(); render();
 }
@@ -1242,6 +1364,10 @@ function onDown(e){
     const a = {id:uid(), type:'stamp', pts:[[p[0]-w/2, p[1]-h/2],[p[0]+w/2, p[1]+h/2]], style, stamp: style.stamp || 'APPROVED', by:S.doc.initials, date:S.doc.date};
     page.anns.push(a); S.sel = a.id; markDirty(); setTool('select'); S.sel = a.id; updateProps(); return;
   }
+  if (t === 'symbols'){
+    if (!SYM_BY_ID[S.sym]){ toast('Pick a symbol in the panel first.'); return; }
+    checkpoint(); const a = makeSym(S.sym, p, S.symRot); page.anns.push(a); markDirty(); return;
+  }
   if (t === 'signature'){ const sig = curSig(); if (!sig) openSignatureModal(); else placeSignature(sig, p); return; }
   if (t === 'legend'){
     checkpoint();
@@ -1254,6 +1380,7 @@ function startPan(e){ S.drag = {mode:'pan', sx:e.clientX, sy:e.clientY, ox:S.ox,
 function onMove(e){
   if (!S.doc) return;
   if (S.pointers.has(e.pointerId)) S.pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (S.tool === 'symbols' && e.pointerType !== 'touch'){ S.hover = toPage(e); render(); }
   if (S.pinch && S.pointers.size === 2){
     const [a, b] = [...S.pointers.values()], d = Math.hypot(b[0]-a[0], b[1]-a[1]), m = [(a[0]+b[0])/2, (a[1]+b[1])/2];
     const r = canvas.getBoundingClientRect();
@@ -1286,7 +1413,7 @@ function onMove(e){
       const a = dr.a;
       if (isRot(a) && a.pts.length >= 2 && dr.i < 2){
         const j = dr.i === 0 ? 1 : 0, Wj = dr.Wj || (dr.Wj = toWorld(a, a.pts[j]));
-        if ((a.type === 'image' || a.type === 'stamp') && !e.altKey){
+        if ((a.type === 'image' || a.type === 'stamp' || a.type === 'sym') && !e.altKey){
           const ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
           const D = rotAround([p[0]-Wj[0], p[1]-Wj[1]], [0,0], -a.rot);
           if (Math.abs(D[0])/ar > Math.abs(D[1])) D[1] = Math.sign(D[1] || 1)*Math.abs(D[0])/ar; else D[0] = Math.sign(D[0] || 1)*Math.abs(D[1])*ar;
@@ -1294,11 +1421,15 @@ function onMove(e){
         }
         const c2 = [(Wj[0]+p[0])/2, (Wj[1]+p[1])/2], hv = rotAround([p[0]-c2[0], p[1]-c2[1]], [0,0], -a.rot);
         a.pts[dr.i] = [c2[0]+hv[0], c2[1]+hv[1]]; a.pts[j] = [c2[0]-hv[0], c2[1]-hv[1]];
+        if (a.type === 'sym'){ // its pivot is the pipe point, not the box centre: shift so the fixed corner stays put
+          const P = rotCenter(a), d = [P[0]-c2[0], P[1]-c2[1]], rd = rotAround(d, [0,0], a.rot), t = [rd[0]-d[0], rd[1]-d[1]];
+          a.pts[0] = [a.pts[0][0]+t[0], a.pts[0][1]+t[1]]; a.pts[1] = [a.pts[1][0]+t[0], a.pts[1][1]+t[1]];
+        }
         render(); return;
       }
       p = snapPt(p, a);
       if (e.shiftKey && a.pts.length === 2 && ['line','arrow','measure','callout'].includes(a.type)) p = constrainAngle(a.pts[1-dr.i], p);
-      if ((a.type === 'image' || a.type === 'stamp') && a.pts.length === 2 && !e.altKey){
+      if ((a.type === 'image' || a.type === 'stamp' || a.type === 'sym') && a.pts.length === 2 && !e.altKey){
         const q = a.pts[1-dr.i], ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
         let dx = p[0]-q[0], dy = p[1]-q[1];
         if (Math.abs(dx)/ar > Math.abs(dy)) dy = Math.sign(dy || 1)*Math.abs(dx)/ar; else dx = Math.sign(dx || 1)*Math.abs(dy)*ar;
@@ -1468,6 +1599,7 @@ function updateProps(){
   if (sel) show.add('selActions');
   if (show.has('sig')) renderSigList();
   if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
+  if (sel && sel.type === 'sym'){ show.add('tag'); if (document.activeElement !== $('#pTag')) $('#pTag').value = sel.tag || ''; }
   $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
   syncAngle();
   $$('#props .prop').forEach(el => el.hidden = !show.has(el.dataset.p));
@@ -1494,6 +1626,7 @@ function applyProp(key, val, final){
   if (sel && !propCheckpointed){ checkpoint(); propCheckpointed = true; }
   if (final) propCheckpointed = false;
   const styleNow = sel ? sel.style : t.style;
+  if (key === 'tag'){ if (sel) sel.tag = val; markDirty(); return; }
   if (key === 'stamp'){
     if (sel){ sel.stamp = val; sel.style.color = STAMPS[val] || sel.style.color; }
     S.styles.stamp.stamp = val; S.styles.stamp.color = STAMPS[val] || S.styles.stamp.color;
@@ -1504,6 +1637,7 @@ function applyProp(key, val, final){
     if (key === 'fillColor' && (!styleNow.fill || styleNow.fill === 'none' || styleNow.fill === 'white')){ styleNow.fill = 'tint'; if (S.styles[t.type]) S.styles[t.type].fill = 'tint'; }
   }
   if (sel) markDirty(); else render();
+  if (t.type === 'sym' && key === 'color' && !$('#symPanel').hidden) renderSymGrid();
   updateProps();
 }
 function syncAngle(){ const a = getSel(), el = $('#pAngle'); if (a && ROT_TYPES.has(a.type) && document.activeElement !== el) el.value = Math.round((a.rot || 0)*180/Math.PI); }
@@ -1603,8 +1737,8 @@ async function rotatePage(){
     if (ROT_TYPES.has(a.type)){
       if (a.type === 'text' || a.type === 'legend') a.pts = [rotPt(a.pts[0])];
       else {
-        const [x, y, w, h] = box(a.pts), nc = rotPt([x+w/2, y+h/2]);
-        a.pts = [[nc[0]-w/2, nc[1]-h/2], [nc[0]+w/2, nc[1]+h/2], ...a.pts.slice(2).map(rotPt)];
+        const P = rotCenter(a), nP = rotPt(P), t = [nP[0]-P[0], nP[1]-P[1]];
+        a.pts = [[a.pts[0][0]+t[0], a.pts[0][1]+t[1]], [a.pts[1][0]+t[0], a.pts[1][1]+t[1]], ...a.pts.slice(2).map(rotPt)];
       }
       a.rot = normAng((a.rot || 0) + Math.PI/2);
       if (a.type === 'patch'){ const [x, y, w, h] = a.src; a.src = [H - (y + h), x, h, w]; }
@@ -1632,6 +1766,9 @@ function renderMarkupList(){
     const A = ar.reduce((s, a) => s + polyArea(a.pts), 0);
     tot.innerHTML = `<div class="totals"><div class="side-h" style="margin:0 0 4px">Page totals</div>${m.length + r.length ? `Lengths: <b>${esc(fmtLen(L, page))}</b><br>` : ''}${ar.length ? `Areas: <b>${esc(fmtArea(A, page))}</b>` : ''}</div>`;
   } else tot.innerHTML = '';
+  const counts = {}; page.anns.filter(a => a.type === 'sym').forEach(a => { const n = typeName(a); counts[n] = (counts[n] || 0) + 1; });
+  const ck = Object.keys(counts).sort();
+  if (ck.length) tot.innerHTML += `<div class="totals"><div class="side-h" style="margin:0 0 4px">HVAC symbols on this page</div>${ck.map(n => `${counts[n]} × ${esc(n)}`).join('<br>')}</div>`;
 }
 
 /* ---------- Doc panel / status ---------- */
@@ -1895,6 +2032,33 @@ function openSignatureModal(){
     });
 }
 
+/* ---------- HVAC symbols panel ---------- */
+function drawSymIcon(cv, def, col){
+  const c = cv.getContext('2d'), [x0,y0,x1,y1] = def.b, k = Math.min((cv.width-18)/(x1-x0), (cv.height-14)/(y1-y0));
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.save(); c.translate(cv.width/2 - (x0+x1)/2*k, cv.height/2 - (y0+y1)/2*k); c.scale(k, k);
+  c.strokeStyle = c.fillStyle = col; c.lineWidth = 2.6/k; c.lineJoin = 'round'; c.lineCap = 'round';
+  def.d(symKit(c, col)); c.restore();
+}
+function renderSymGrid(){
+  const q = ($('#symSearch').value || '').toLowerCase().trim(), col = S.styles.sym.color, grid = $('#symGrid');
+  grid.innerHTML = '';
+  for (const g of [...new Set(SYMS.map(x => x.g))]){
+    const items = SYMS.filter(x => x.g === g && (!q || `${x.n} ${x.k} ${g}`.toLowerCase().includes(q)));
+    if (!items.length) continue;
+    const h = document.createElement('div'); h.className = 'sym-g'; h.textContent = g; grid.appendChild(h);
+    const wrap = document.createElement('div'); wrap.className = 'sym-grid'; grid.appendChild(wrap);
+    for (const x of items){
+      const b = document.createElement('button'); b.className = 'sym-btn' + (x.id === S.sym ? ' on' : ''); b.dataset.sym = x.id; b.title = x.n;
+      const cv = document.createElement('canvas'); cv.width = 128; cv.height = 80; drawSymIcon(cv, x, col);
+      const sp = document.createElement('span'); sp.textContent = x.s;
+      b.append(cv, sp); wrap.appendChild(b);
+    }
+  }
+  if (!grid.children.length) grid.innerHTML = '<p class="muted">No symbols match that search.</p>';
+}
+function syncSymDir(){ const deg = Math.round((S.symRot || 0)*180/Math.PI); $$('[data-symdir]').forEach(b => b.classList.toggle('on', (+b.dataset.symdir === 0 && deg === 0) || (+b.dataset.symdir === 90 && Math.abs(deg) === 90))); }
+
 /* ---------- Selection actions ---------- */
 function deleteSel(){ const a = getSel(); if (!a) return; checkpoint(); cur().anns = cur().anns.filter(x => x !== a); S.sel = null; markDirty(); updateProps(); }
 function cloneAnn(a, off){ const c = JSON.parse(JSON.stringify(a, strip)); c.id = uid(); c.pts = c.pts.map(p => [p[0]+off, p[1]+off]); return c; }
@@ -1926,6 +2090,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '+' || e.key === '='){ zoomCenter(1.25); return; }
   if (e.key === '-' || e.key === '_'){ zoomCenter(0.8); return; }
   if (e.key === '0'){ fitPage(); return; }
+  if ((e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') && S.tool === 'symbols' && !getSel()){ e.preventDefault(); S.symRot = normAng((S.symRot || 0) + (e.key === '[' || e.key === '{' ? -1 : 1)*(e.shiftKey ? 90 : 15)*Math.PI/180); syncSymDir(); render(); return; }
   if ((e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') && getSel()){ e.preventDefault(); rotateSelBy((e.key === '[' || e.key === '{' ? -1 : 1) * (e.shiftKey ? 90 : 15)); return; }
   if (KEYMAP[k]) setTool(KEYMAP[k]);
 });
@@ -1952,6 +2117,7 @@ function init(){
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointercancel', onUp);
   canvas.addEventListener('dblclick', onDbl);
+  canvas.addEventListener('pointerleave', () => { if (S.hover){ S.hover = null; render(); } });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   view.addEventListener('wheel', onWheel, {passive:false});
   view.tabIndex = -1;
@@ -1994,6 +2160,16 @@ function init(){
   $('#pAngle').addEventListener('keydown', e => e.stopPropagation());
   $('#btnDel').onclick = deleteSel; $('#btnDup').onclick = duplicateSel; $('#btnFront').onclick = bringFront;
   $('#sigNew').onclick = openSignatureModal;
+  S.sym = 'iso'; S.symRot = 0; S.symSize = 1;
+  $('#symGrid').addEventListener('click', e => { const b = e.target.closest('[data-sym]'); if (!b) return; S.sym = b.dataset.sym; $$('#symGrid .sym-btn').forEach(x => x.classList.toggle('on', x === b)); render(); });
+  $('#symSearch').addEventListener('input', renderSymGrid);
+  $('#symSearch').addEventListener('keydown', e => e.stopPropagation());
+  $('#symClose').onclick = () => setTool('select');
+  $$('[data-symdir]').forEach(b => b.onclick = () => { S.symRot = (+b.dataset.symdir)*Math.PI/180; syncSymDir(); });
+  $('#symSize').addEventListener('input', e => { S.symSize = +e.target.value/100; $('#symSizeLbl').textContent = e.target.value + '%'; });
+  $('#pTag').addEventListener('input', e => applyProp('tag', e.target.value, false));
+  $('#pTag').addEventListener('change', e => applyProp('tag', e.target.value, true));
+  $('#pTag').addEventListener('keydown', e => e.stopPropagation());
   $('#sigDate').onchange = e => { settings.sigDate = e.target.checked; saveSettings(); };
   $('#sigList').addEventListener('click', e => {
     const del = e.target.closest('[data-sigdel]');
