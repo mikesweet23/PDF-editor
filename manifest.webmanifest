@@ -1,0 +1,30 @@
+{
+  "id": "./",
+  "name": "ADI Markup",
+  "short_name": "ADI Markup",
+  "description": "ADI Climate Systems drawing markup – mark up, measure and re-issue PDF, JPEG, PNG and TIFF drawings.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14284b",
+  "theme_color": "#14284b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/pdf": [".pdf"],
+        "image/png": [".png"],
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/tiff": [".tif", ".tiff"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "launch_handler": { "client_mode": "focus-existing" }
+}
