@@ -1,0 +1,2530 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADI Markup</title>
+<meta name="description" content="ADI Climate Systems drawing markup tool – mark up, measure and export PDF, JPEG and PNG drawings.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root{
+  --navy:#14284b; --navy-2:#1e3a66; --accent:#0096d6; --accent-soft:#e3f3fb;
+  --bg:#eef1f5; --panel:#ffffff; --border:#d6dce4; --text:#1b2533; --muted:#647083;
+  --canvas-bg:#5d6676; --danger:#c62828;
+  --field:#ffffff; --border-strong:#b6c2d2; --heading:#14284b; --accent-line:#b7dff2; --tool-fg:#34405a; --warn:#b45309; --danger-line:#f0c4c4;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1622; --panel:#18212f; --field:#1f2a3a; --border:#2c3a4f; --border-strong:#3d4e66; --text:#e4e9f1; --muted:#9aa6b8;
+  --heading:#9fd0ee; --accent-soft:#16344a; --accent-line:#245a7a; --canvas-bg:#2a313d; --tool-fg:#c5cfdd; --warn:#f0a35a; --danger:#ef7b7b; --danger-line:#5a2d2d; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1622; --panel:#18212f; --field:#1f2a3a; --border:#2c3a4f; --border-strong:#3d4e66; --text:#e4e9f1; --muted:#9aa6b8;
+  --heading:#9fd0ee; --accent-soft:#16344a; --accent-line:#245a7a; --canvas-bg:#2a313d; --tool-fg:#c5cfdd; --warn:#f0a35a; --danger:#ef7b7b; --danger-line:#5a2d2d; color-scheme:dark }
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font:14px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg);
+  display:grid;overflow:hidden;
+  grid-template-rows:52px auto 1fr 34px;
+  grid-template-columns:54px 1fr 290px;
+  grid-template-areas:"hdr hdr hdr" "tools props side" "tools view side" "tools status side";
+}
+body.no-side{grid-template-columns:54px 1fr 0}
+body.no-side #sidebar{display:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+
+/* Header */
+#hdr{grid-area:hdr;overflow-x:auto;overflow-y:hidden;background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.brand img{height:30px;background:#fff;border-radius:4px;padding:2px 6px}
+.wordmark{font-size:19px;letter-spacing:.2px}
+.wordmark b{font-weight:800;font-size:23px;letter-spacing:-.5px;color:#fff}
+.wordmark span{color:#9fd8f2;font-weight:400}
+.app-tag{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;background:var(--accent);padding:2px 7px;border-radius:4px;font-weight:600}
+#docName{flex:1 1 200px;min-width:80px;max-width:420px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;padding:6px 10px}
+#docName::placeholder{color:rgba(255,255,255,.55)}
+#docName:focus{outline:none;background:rgba(255,255,255,.18);border-color:var(--accent)}
+.hdr-date{font-size:12px;color:#c9d6ea;white-space:nowrap}
+.spacer{flex:1}
+.hbtn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:6px 10px;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.12)}
+.hbtn.primary{background:var(--accent);border-color:var(--accent)}
+.hbtn.primary:hover{filter:brightness(1.08)}
+.hbtn:disabled{opacity:.4;cursor:default}
+.hbtn svg{width:17px;height:17px}
+.menu-wrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.18);min-width:260px;padding:6px;z-index:50}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:6px}
+.menu button:hover{background:var(--accent-soft)}
+.menu small{display:block;color:var(--muted);font-size:12px}
+
+/* Tools */
+#tools{grid-area:tools;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px;overflow-y:auto}
+.tool{width:40px;height:36px;flex:0 0 auto;display:grid;place-items:center;border:0;background:none;border-radius:6px;color:var(--tool-fg);position:relative}
+.tool:hover{background:var(--bg)}
+.tool.active{background:var(--navy);color:#fff}
+.tool svg{width:21px;height:21px}
+.tool-sep{width:30px;height:1px;background:var(--border);margin:4px 0;flex:0 0 auto}
+svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* Props bar */
+#props{grid-area:props;background:var(--panel);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:7px 12px;min-height:46px;white-space:nowrap;min-width:0}
+#propTitle{font-weight:600;color:var(--heading);min-width:110px}
+.prop{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.prop input[type=range]{width:80px}
+.prop select,.prop input[type=text]{border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--field);color:var(--text)}
+.swatches{display:flex;gap:4px}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px #b8c0cc;padding:0}
+.sw.on{box-shadow:0 0 0 2px var(--navy)}
+.sigs{display:flex;gap:8px;align-items:center}
+.sig-chip{position:relative;height:34px;min-width:64px;border:1px solid var(--border);border-radius:6px;background:#fff;padding:2px 8px;display:grid;place-items:center}
+.sig-chip.on{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
+.sig-chip img{max-height:28px;max-width:130px;display:block}
+.sig-chip .x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:var(--danger);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer}
+.sig-tabs{display:flex;gap:6px;margin-bottom:12px}
+.sig-tabs button{flex:1;border:1px solid var(--border);background:var(--field);color:var(--text);border-radius:7px;padding:8px}
+.sig-tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sig-pad{position:relative;background:#fff;border:1px solid var(--border);border-radius:8px;height:190px;touch-action:none;overflow:hidden}
+.sig-pad::after{content:"";position:absolute;left:24px;right:24px;bottom:44px;border-bottom:1.5px dashed #9aa6b8;pointer-events:none}
+.sig-pad canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.sig-pad .ph{position:absolute;left:26px;bottom:20px;color:#8792a4;font-size:12px;pointer-events:none}
+.sig-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sym-panel{position:absolute;top:10px;left:10px;bottom:10px;width:min(286px,calc(100% - 20px));background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.28);display:flex;flex-direction:column;z-index:6;overflow:hidden}
+.sym-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.sym-head b{flex:1;color:var(--heading);font-size:15px}
+.sym-x{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;padding:2px 6px;border-radius:6px}
+.sym-x:hover{background:var(--bg)}
+.sym-tools{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.sym-tools input[type=search]{border:1px solid var(--border);border-radius:7px;padding:7px 9px;background:var(--field);color:var(--text);width:100%}
+.sym-row{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.sym-row .pbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sym-row input[type=range]{flex:1;min-width:70px}
+.sym-check{display:flex;gap:7px;align-items:center;font-size:12.5px;color:var(--text);cursor:pointer}
+.sym-check input{flex:0 0 auto;margin:0}
+.sym-scroll{flex:1;overflow-y:auto;padding:2px 12px 12px}
+.sym-g{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--heading);margin:12px 0 6px}
+.sym-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sym-btn{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--border);background:#fff;color:#1b2533;border-radius:8px;padding:5px 3px 6px;font-size:10.5px;line-height:1.2;text-align:center;min-height:72px}
+.sym-btn:hover{border-color:var(--accent)}
+.sym-btn.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.sym-btn canvas{width:64px;height:40px;display:block}
+.sym-help{font-size:12px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--border);margin:0}
+.sig-note{background:var(--bg);border-radius:8px;padding:9px 11px;font-size:12.5px;color:var(--muted);margin:12px 0 0}
+#pColor,#pFillColor{width:28px;height:26px;border:1px solid var(--border);border-radius:6px;padding:1px;background:var(--field)}
+.pbtn{border:1px solid var(--border);background:var(--field);border-radius:6px;padding:4px 10px;color:var(--text)}
+.pbtn:hover{background:var(--bg)}
+.pbtn.danger{color:var(--danger);border-color:var(--danger-line)}
+#propHint{color:var(--muted);font-size:13px}
+
+/* Viewport */
+#view{grid-area:view;position:relative;overflow:hidden;background:var(--canvas-bg);touch-action:none}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block}
+#view.pan #stage{cursor:grab}
+#view.panning #stage{cursor:grabbing}
+#view.draw #stage{cursor:crosshair}
+#view.text #stage{cursor:text}
+.text-editor{position:absolute;z-index:5;border:1.5px dashed var(--accent);background:rgba(255,255,255,.92);outline:none;resize:none;overflow:hidden;padding:0 2px;margin:0;line-height:1.25;font-family:Arial,Helvetica,sans-serif;min-width:60px;white-space:pre}
+
+#welcome{position:absolute;inset:0;display:grid;place-items:center;padding:16px;overflow:auto}
+.welcome-card{background:var(--panel);border-radius:14px;max-width:560px;width:100%;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
+.welcome-card h1{margin:0 0 4px;color:var(--heading);font-size:24px}
+.welcome-card p{color:var(--muted);margin:0 0 18px}
+.drop{border:2px dashed var(--border-strong);border-radius:12px;padding:28px 16px;margin-bottom:16px;color:var(--muted)}
+.drop.over,body.dragging .drop{border-color:var(--accent);background:var(--accent-soft);color:var(--heading)}
+.big-btn{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:11px 20px;font-weight:600;font-size:15px}
+.big-btn:hover{background:var(--navy-2)}
+.link-btn{background:none;border:0;color:var(--accent);text-decoration:underline;padding:6px}
+.formats{font-size:12px;color:var(--muted);margin-top:10px}
+#restoreBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* Status */
+#status{grid-area:status;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 10px;font-size:13px;white-space:nowrap;overflow:hidden}
+.sbtn{flex:0 0 auto;border:1px solid var(--border);background:var(--field);border-radius:5px;min-width:26px;height:24px;padding:0 7px}
+.sbtn:hover{background:var(--bg)}
+#zoomPct{min-width:46px;text-align:center}
+#scaleInfo{color:var(--heading);font-weight:600}
+#scaleInfo.none{color:var(--warn)}
+#hint{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+
+/* Sidebar */
+#sidebar{grid-area:side;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tabs button{flex:1;background:none;border:0;padding:11px 4px;border-bottom:2px solid transparent;color:var(--muted);font-weight:600}
+.tabs button.on{color:var(--heading);border-bottom-color:var(--accent)}
+.tab{flex:1;overflow-y:auto;padding:12px;min-height:0}
+.thumbs{display:flex;flex-direction:column;gap:12px;align-items:center}
+.thumb{border:2px solid transparent;border-radius:6px;padding:4px;background:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:4px}
+.thumb.on{border-color:var(--accent);background:var(--accent-soft)}
+.thumb canvas{max-width:100%;box-shadow:0 1px 4px rgba(0,0,0,.25);background:#fff}
+.thumb span{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.field{display:block;margin-bottom:12px}
+.field>span{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.field input[type=text],.field input[type=date],.field input[type=number],.field select{width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--field)}
+.check{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.mk-list{list-style:none;margin:0;padding:0}
+.mk{display:flex;align-items:center;gap:8px;padding:7px 6px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.mk:hover{background:var(--bg)}
+.mk.on{background:var(--accent-soft);border-color:var(--accent-line)}
+.mk .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.2)}
+.mk .t{flex:1;min-width:0}
+.mk .t b{display:block;font-weight:600;font-size:13px}
+.mk .t small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk .del{border:0;background:none;color:var(--muted);font-size:16px;padding:0 4px}
+.mk .del:hover{color:var(--danger)}
+.muted{color:var(--muted);font-size:13px}
+.side-h{font-size:12px;font-weight:700;color:var(--heading);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 8px}
+.totals{background:var(--bg);border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(15,25,45,.5);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--panel);border-radius:12px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal h2{margin:0;padding:16px 20px;border-bottom:1px solid var(--border);font-size:17px;color:var(--heading)}
+.modal .body{padding:16px 20px}
+.modal .foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.btn{border:1px solid var(--border);background:var(--field);border-radius:7px;padding:8px 14px}
+.btn.primary{background:var(--navy);border-color:var(--heading);color:#fff}
+.btn.danger{color:var(--danger)}
+.opt{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px}
+.opt h3{margin:0 0 6px;font-size:14px}
+.legend-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.legend-row .dot{width:16px;height:16px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.2)}
+.legend-row input{flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 7px}
+
+#toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:200;max-width:min(560px,92vw);font-size:15px;border-left:6px solid var(--accent)}
+#toast.ok{border-left-color:#43a047}
+#toast.err{border-left-color:#e53935}
+#saveState{font-size:12px;padding:3px 9px;border-radius:999px;white-space:nowrap;font-weight:700;letter-spacing:.2px}
+#saveState.dirty{background:#f5a524;color:#231600}
+#saveState.saved{background:#2e7d32;color:#fff}
+.save-file{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--muted);word-break:break-all}
+.save-file b{color:var(--text)}
+.save-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
+.save-opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--border);background:var(--field);border-radius:10px;padding:12px 14px;color:var(--text)}
+.save-opt:hover,.save-opt:focus-visible{border-color:var(--accent);background:var(--accent-soft);outline:none}
+.save-opt b{font-size:15px}
+.save-opt small{color:var(--muted);font-size:12.5px}
+.save-opt.primary{grid-column:1/-1;background:var(--navy);border-color:var(--navy);color:#fff}
+.save-opt.primary small{color:#c9d6ea}
+.save-opt.primary:hover,.save-opt.primary:focus-visible{background:var(--navy-2)}
+@media (max-width:480px){.save-grid{grid-template-columns:1fr}}
+@media (max-width:1180px){ .hbtn:not(.keep-lbl) .lbl{display:none} }
+@media (max-width:900px){ .wordmark span{display:none} #hdr{gap:7px} }
+@media (max-width:560px){ #btnRedo{display:none} #hdr{gap:5px;padding:0 8px} }
+
+@media (max-height:900px) and (min-width:561px){
+  body{grid-template-columns:88px 1fr 290px} body.no-side{grid-template-columns:88px 1fr 0}
+  #tools{display:grid;grid-template-columns:40px 40px;grid-auto-rows:34px;gap:2px;justify-content:center;align-content:start}
+  .tool{height:34px}
+  .tool-sep{grid-column:1/-1;width:76px;height:1px;margin:3px 0;align-self:center}
+}
+@media (max-width:900px){
+  body{grid-template-columns:48px 1fr 0}
+  #tools{display:flex}
+  .tool-sep{width:30px;margin:4px 0}
+  body.show-side{grid-template-columns:48px 1fr 270px}
+  #sidebar{display:none}
+  body.show-side #sidebar{display:flex}
+  .hide-sm,.hdr-date,.app-tag{display:none}
+  .tool{width:38px}
+}
+@media (max-width:560px){ .wordmark span{display:none} .hbtn .lbl{display:none} }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="brand">
+    <img id="brandLogo" alt="Company logo" hidden>
+    <div class="wordmark" id="wordmark"><b>adi</b> <span>climate systems</span></div>
+    <div class="app-tag">Markup</div>
+  </div>
+  <input id="docName" placeholder="Document name" title="Rename – used for saved and exported file names" disabled>
+  <span id="saveState" hidden></span>
+  <span class="hdr-date" id="hdrDate"></span>
+  <div class="spacer"></div>
+  <button class="hbtn" id="btnOpen" title="Open PDF, JPEG, PNG or saved markup (Ctrl+O)"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span class="lbl">Open</span></button>
+  <button class="hbtn" id="btnUndo" title="Undo (Ctrl+Z)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+  <button class="hbtn" id="btnRedo" title="Redo (Ctrl+Y)" disabled><svg class="i" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
+  <button class="hbtn primary keep-lbl" id="btnSave" title="Save or export your marked-up document" disabled><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/></svg><span class="lbl">Save</span></button>
+  <div class="menu-wrap">
+    <button class="hbtn" id="btnExport" title="Export" disabled><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><span class="lbl">Export</span></button>
+    <div class="menu" id="exportMenu" hidden>
+      <button data-exp="pdf">PDF<small>All pages, markups flattened in</small></button>
+      <button data-exp="png">PNG image<small>Current page, full quality</small></button>
+      <button data-exp="jpg">JPEG image<small>Current page, smaller file</small></button>
+      <button data-exp="csv">Markup &amp; measurement schedule (CSV)<small>Opens in Excel – every markup on every page</small></button>
+    </div>
+  </div>
+  <button class="hbtn" id="btnSettings" title="Settings – initials, logo, colour key"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+  <button class="hbtn" id="btnSide" title="Show / hide side panel"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
+  <input type="file" id="fileOpen" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.webp,.gif,.bmp,.adimarkup,.json,application/pdf,image/png,image/jpeg,image/tiff,image/webp,image/gif,image/bmp" hidden>
+  <input type="file" id="fileImage" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/tiff,.tif,.tiff" hidden>
+</header>
+
+<nav id="tools" aria-label="Tools"></nav>
+
+<div id="props">
+  <span id="propTitle">Select</span>
+  <div class="prop" data-p="color">Outline <div class="swatches" id="swatches"></div><input type="color" id="pColor" title="Custom colour"></div>
+  <label class="prop" data-p="lw">Line <input type="range" id="pLw" min="1" max="24" step="1"></label>
+  <label class="prop" data-p="dash">Style <select id="pDash"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
+  <div class="prop" data-p="fill">Fill <input type="color" id="pFillColor" title="Fill colour"><select id="pFill" title="Fill strength"><option value="none">No fill</option><option value="tint">Light</option><option value="half">Medium</option><option value="solid">Solid</option></select></div>
+  <label class="prop" data-p="shape">Shape <select id="pShape"><option value="box">Box</option><option value="ellipse">Ellipse / circle</option></select></label>
+  <label class="prop" data-p="tfill">Background <select id="pTFill"><option value="none">None</option><option value="white">White</option><option value="box">White + border</option></select></label>
+  <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="4" max="60" step="1"></label>
+  <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
+  <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
+  <label class="prop" data-p="svc">Service <select id="pSvc"></select></label>
+  <label class="prop" data-p="psize">Size <input type="text" id="pSize" size="7" maxlength="16" placeholder="e.g. 28mm"></label>
+  <label class="prop" data-p="note">Note <input type="text" id="pNote" size="44" maxlength="400" placeholder="Note shown at the bottom of the schedule"></label>
+  <label class="prop" data-p="tag">Tag <input type="text" id="pTag" size="8" maxlength="24" placeholder="e.g. V1, 25mm"></label>
+  <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
+  <div class="prop" data-p="sig"><div class="sigs" id="sigList"></div><button class="pbtn" id="sigNew">+ New signature</button><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="sigDate"> Add “Signed” date</label></div>
+  <span class="prop" data-p="rot">Rotate
+    <button class="pbtn" data-rot="-90" title="Rotate 90° anticlockwise">⟲ 90°</button><button class="pbtn" data-rot="-15" title="Rotate 15° anticlockwise ( [ )">⟲ 15°</button><button class="pbtn" data-rot="15" title="Rotate 15° clockwise ( ] )">⟳ 15°</button><button class="pbtn" data-rot="90" title="Rotate 90° clockwise">⟳ 90°</button>
+    <span id="pAngleWrap"><input type="number" id="pAngle" step="1" min="-180" max="180" title="Angle in degrees" style="width:62px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--field);color:var(--text)">°</span>
+  </span>
+  <span id="propHint"></span>
+  <div class="spacer"></div>
+  <span class="prop" data-p="selActions">
+    <button class="pbtn" id="btnFront" title="Bring to front">Front</button>
+    <button class="pbtn" id="btnDup" title="Duplicate (Ctrl+D)">Duplicate</button>
+    <button class="pbtn danger" id="btnDel" title="Delete (Del)">Delete</button>
+  </span>
+</div>
+
+<main id="view">
+  <canvas id="stage"></canvas>
+  <div id="symPanel" class="sym-panel" hidden>
+    <div class="sym-head"><b>HVAC symbols</b><button class="sym-x" id="symClose" title="Close (Esc)" aria-label="Close symbols">×</button></div>
+    <div class="sym-tools">
+      <input type="search" id="symSearch" placeholder="Search, e.g. valve, pump, sensor" aria-label="Search symbols">
+      <div class="sym-row">Pipe runs <button class="pbtn on" data-symdir="0" title="Horizontal pipe">⟷ Horizontal</button><button class="pbtn" data-symdir="90" title="Vertical pipe">↕ Vertical</button></div>
+      <label class="sym-check"><input type="checkbox" id="symAutoTag"><span>Number tags automatically (IV1, IV2, P1…)</span></label>
+      <label class="sym-check"><input type="checkbox" id="symSched"><span>Add a valve &amp; component schedule to the drawing</span></label>
+      <div class="sym-row">Size <input type="range" id="symSize" min="40" max="300" step="10" value="100" aria-label="Symbol size"><span id="symSizeLbl">100%</span></div>
+    </div>
+    <div class="sym-scroll" id="symGrid"></div>
+    <p class="sym-help">Pick a symbol, then click on the pipework to place it – keep clicking to add more. <b>[</b> <b>]</b> rotate, colours are in the bar above.</p>
+  </div>
+  <div id="welcome">
+    <div class="welcome-card">
+      <h1>ADI Markup</h1>
+      <p>Mark up, measure and re-issue drawings – PDF, JPEG and PNG.</p>
+      <div class="drop" id="drop">
+        <div style="margin-bottom:12px">Drag a drawing here, or</div>
+        <button class="big-btn" id="btnOpen2">Open a file</button>
+        <div class="formats">PDF · JPEG · PNG · TIFF (incl. multi-page) · WebP · GIF · BMP<br>and saved .adimarkup.json projects<br>Files stay on this computer – nothing is uploaded.</div>
+      </div>
+      <div id="restoreBox" hidden>
+        <div class="muted">Unsaved work from your last session:</div>
+        <button class="link-btn" id="btnRestore"></button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer id="status">
+  <button class="sbtn" id="pgPrev" title="Previous page (Page Up)">‹</button>
+  <span id="pgInfo">–</span>
+  <button class="sbtn" id="pgNext" title="Next page (Page Down)">›</button>
+  <span style="width:6px"></span>
+  <button class="sbtn" id="zOut" title="Zoom out (-)">−</button>
+  <span id="zoomPct">100%</span>
+  <button class="sbtn" id="zIn" title="Zoom in (+)">+</button>
+  <button class="sbtn" id="zFit" title="Fit page (0)">Fit</button>
+  <button class="sbtn hide-sm" id="zWidth" title="Fit width">Width</button>
+  <span style="width:6px"></span>
+  <button class="sbtn" id="scaleBtn" title="Set the drawing scale"><span id="scaleInfo" class="none">No scale</span></button>
+  <span id="hint"></span>
+</footer>
+
+<aside id="sidebar">
+  <div class="tabs">
+    <button data-tab="pages" class="on">Pages</button>
+    <button data-tab="markups">Markups</button>
+    <button data-tab="doc">Document</button>
+  </div>
+  <div class="tab" id="tab-pages">
+    <div class="row">
+      <button class="btn" id="btnRotate" title="Rotate this page 90° clockwise">↻ Rotate page</button>
+    </div>
+    <div class="thumbs" id="thumbs"><div class="muted">No document open.</div></div>
+  </div>
+  <div class="tab" id="tab-markups" hidden>
+    <div id="mkTotals"></div>
+    <ul class="mk-list" id="mkList"></ul>
+  </div>
+  <div class="tab" id="tab-doc" hidden>
+    <label class="field"><span>Document name</span><input type="text" id="dName"></label>
+    <label class="field"><span>Markup date</span>
+      <div class="row" style="margin:0"><input type="date" id="dDate" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:7px 8px"><button class="btn" id="dToday">Today</button></div>
+    </label>
+    <label class="field"><span>Marked up by (initials)</span><input type="text" id="dBy" maxlength="12"></label>
+    <label class="field"><span>Revision</span><input type="text" id="dRev" maxlength="8"></label>
+    <label class="check"><input type="checkbox" id="dFooter"> Add ADI markup stamp to each page</label>
+    <label class="field"><span>Measurement units</span><select id="dUnits"><option value="mm">Millimetres (mm)</option><option value="m">Metres (m)</option></select></label>
+    <div class="field"><span>Scale – this page</span>
+      <div class="row" style="margin:0"><span id="dScale" class="muted" style="flex:1">Not set</span><button class="btn" id="dScaleBtn">Set scale…</button></div>
+    </div>
+    <p class="muted">Name and date are used for file names, e.g. <i id="dExample"></i></p>
+  </div>
+</aside>
+
+<div id="toast" hidden></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   ADI Markup – single-file drawing markup tool
+   ===================================================================== */
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const ukDate = iso => { if (!iso) return ''; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const FONT = 'Arial, Helvetica, sans-serif';
+
+/* ---------- Settings (per computer) ---------- */
+const DEFAULT_LEGEND = [
+  {c:'#e53935', label:'Remove / delete'},
+  {c:'#2e7d32', label:'New / add'},
+  {c:'#1565c0', label:'Comment / note'},
+  {c:'#ef6c00', label:'Relocate / move'},
+  {c:'#6a1b9a', label:'Measurement'},
+  {c:'#ffeb3b', label:'Highlight'},
+  {c:'#000000', label:'General'},
+  {c:'#ffffff', label:'White'},
+];
+const settings = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem('adi-markup.settings') || '{}'); } catch (e) {}
+  return Object.assign({initials:'', footer:true, units:'mm', logo:null, legend:DEFAULT_LEGEND.map(x=>({...x}))}, s);
+})();
+function saveSettings(){ try { localStorage.setItem('adi-markup.settings', JSON.stringify(settings)); return true; } catch (e) { toast('Could not store this in your browser (storage is blocked or full, e.g. in a private window).', 6000, 'err'); return false; } }
+let logoImg = null;
+function loadLogo(){
+  if (!settings.logo){ logoImg = null; $('#brandLogo').hidden = true; $('#wordmark').hidden = false; return; }
+  const im = new Image(); im.onload = () => { logoImg = im; render(); }; im.src = settings.logo;
+  $('#brandLogo').src = settings.logo; $('#brandLogo').hidden = false; $('#wordmark').hidden = true;
+}
+
+/* ---------- Tools ---------- */
+const IC = {
+  select:'<path d="M5 3l14 8-6 2-3 6z"/>',
+  pan:'<path d="M7 11V6a1.5 1.5 0 013 0v5M10 10V4.5a1.5 1.5 0 013 0V10M13 10V5.5a1.5 1.5 0 013 0V12M16 9a1.5 1.5 0 013 0v5a7 7 0 01-7 7h-1a6 6 0 01-5-3l-3-5a1.5 1.5 0 012.5-1.6L7 14"/>',
+  line:'<path d="M5 19L19 5"/>',
+  arrow:'<path d="M5 19L19 5M10 5h9v9"/>',
+  rect:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
+  ellipse:'<ellipse cx="12" cy="12" rx="9" ry="6.5"/>',
+  polygon:'<path d="M12 3l8 6-3 10H7L4 9z"/>',
+  pen:'<path d="M3 17c3-6 5 2 8-3s4-8 7-6 1 6-2 9"/>',
+  cloud:'<path d="M6 9a2.5 2.5 0 014.5-1.5A2.5 2.5 0 0115 6.5a2.5 2.5 0 014 2.5 2.5 2.5 0 01-.5 5 2.5 2.5 0 01-4 2.5 2.5 2.5 0 01-4.5.5A2.5 2.5 0 015.5 15 2.5 2.5 0 016 9z"/>',
+  text:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+  callout:'<path d="M4 4h16v10H10l-5 5v-5H4z"/>',
+  stamp:'<path d="M9 3h6l-1 7h4a2 2 0 012 2v3H4v-3a2 2 0 012-2h4zM4 19h16"/>',
+  image:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-9 8"/>',
+  signature:'<path d="M3 16c2-4 4-9 6-9 2.5 0-1.5 9 1 9 2 0 2.5-4 4-4s1 3 3 3h4"/><path d="M3 20h18"/>',
+  legend:'<path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/>',
+  marker:'<path d="M15 4l5 5-8 8H7v-5zM4 21h9"/>',
+  pipe:'<path d="M3 9h7l3 6h8"/><path d="M3 15h4" stroke-dasharray="2 2.5"/><path d="M14 9h7" stroke-dasharray="2 2.5"/>',
+  symbols:'<path d="M2 12h3M19 12h3"/><path d="M5 7v10l7-5zM19 7v10l-7-5z"/><path d="M12 12V5M9 4h6"/>',
+  hlbox:'<rect x="3" y="7" width="18" height="10" rx="1" fill="currentColor" fill-opacity=".3"/>',
+  whiteout:'<path d="M16 3l5 5-11 11H5l-3-3zM9 9l6 6M13 21h8"/>',
+  movearea:'<path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6M12 8v8M8 12h8"/>',
+  calibrate:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>',
+  measure:'<path d="M4 12h16M4 8v8M20 8v8M8 10l-3 2 3 2M16 10l3 2-3 2"/>',
+  run:'<path d="M4 19l5-8 5 4 6-10"/><circle cx="4" cy="19" r="1.3"/><circle cx="20" cy="5" r="1.3"/>',
+  area:'<path d="M4 18L7 5l13 3-3 11z" fill="currentColor" fill-opacity=".2"/>',
+};
+const TOOLS = [
+  ['select','V','Select / move'],['pan','H','Pan (or hold Space)'],null,
+  ['line','L','Line'],['arrow','A','Arrow'],['rect','R','Rectangle'],['ellipse','E','Ellipse / circle'],['polygon','P','Polygon'],['pen','F','Freehand'],['cloud','C','Cloud markup (box or ellipse + note)'],null,
+  ['text','T','Text'],['callout','O','Callout (arrow + note)'],['stamp','S','Stamp'],['signature','G','Sign – place your saved signature'],['image','I','Image (or paste)'],['legend','K','Colour key'],null,
+  ['symbols','Q','HVAC symbols – valves, pumps, plant, sensors'],['pipe','J','Pipe service line (LTHW, CHW, CWS…)'],null,
+  ['marker','Y','Highlighter'],['hlbox','B','Highlight box'],null,
+  ['whiteout','W','White-out (cover)'],['movearea','X','Move part of drawing'],null,
+  ['calibrate','','Set scale from a known dimension'],['measure','M','Measure length'],['run','N','Measure run (multi-point)'],['area','U','Measure area'],
+];
+const typeName = a => a.type === 'pipe' ? 'Pipe – ' + ((SERVICE_BY_ID[a.style.svc] || {}).n || 'service') : a.sig ? 'Signature' : a.type === 'sym' ? ((SYM_BY_ID[a.sym] || {}).n || 'HVAC symbol') : (TYPE_NAME[a.type] || a.type);
+const TYPE_NAME = {pipe:'Pipe service line', signature:'Sign', symbols:'HVAC symbols', sym:'HVAC symbol', schedule:'Valve & component schedule', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
+const HINTS = {
+  select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
+  pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
+  line:'Drag to draw. Hold Shift for 0° / 45° / 90°.', arrow:'Drag from tail to tip. Hold Shift for 0° / 45° / 90°.',
+  rect:'Drag to draw. Hold Shift for a square.', ellipse:'Drag to draw. Hold Shift for a circle.',
+  polygon:'Click to add corners. Double-click, Enter, or click the first point to finish.',
+  pen:'Drag to draw freehand.', cloud:'Drag around the area. Pick Box or Ellipse and a fill above; Shift = square/circle. Then type a note (Esc to skip).',
+  text:'Click to place text. Ctrl+Enter or click away to finish.', callout:'Drag from the item you are pointing at to where the note should go.',
+  stamp:'Pick a stamp above, then click to place it. Drag a corner handle to resize.',
+  image:'Choose an image to insert. You can also paste an image with Ctrl+V.',
+  signature:'Click on the drawing to place your signature. Drag a corner to resize. Pick, add or delete signatures above.',
+  legend:'Click to place a colour key. Edit the meanings in Settings.',
+  pipe:'Pick the service above, click along the pipe route, double-click or Enter to finish. Shift = 0/45/90°. Labels repeat on long runs.',
+  symbols:'Pick a symbol in the panel, then click on the pipework to place it. Keep clicking to add more. [ ] rotate.',
+  marker:'Drag over items to highlight them.', hlbox:'Drag a box to highlight an area.',
+  whiteout:'Drag to cover part of the drawing. Then add text on top to “edit” it.',
+  movearea:'Drag a box around the part of the drawing to move – then drag it to its new position.',
+  calibrate:'Drag along a dimension you know (e.g. a gridline span), then type its real length.',
+  measure:'Drag to measure. Snaps to markup end points. Shift = straight.',
+  run:'Click points along a run; double-click or Enter to finish. Gives total length.',
+  area:'Click around an area; double-click or Enter to finish. Gives m² and perimeter.',
+};
+const PROPS = {
+  line:['color','lw','dash','opacity'], arrow:['color','lw','dash','opacity'], pen:['color','lw','opacity'],
+  rect:['color','lw','dash','fill','opacity'], ellipse:['color','lw','dash','fill','opacity'], polygon:['color','lw','dash','fill','opacity'],
+  cloud:['color','lw','fill','shape','fs','rev'], text:['color','fs','tfill'], callout:['color','lw','fs'], stamp:['color','stamp','opacity'],
+  image:['opacity'], signature:['sig'], legend:['fs'], marker:['color','lw','opacity'], hlbox:['color','opacity'], whiteout:['color'],
+  patch:[], schedule:['fs','note'], sym:['color','lw','fs','psize'], pipe:['svc','psize','color','lw','dash','fs'], measure:['color','lw','fs'], run:['color','lw','fs'], area:['color','lw','fs','fill'],
+};
+const STAMPS = {
+  'APPROVED':'#2e7d32','APPROVED AS NOTED':'#ef6c00','REVISED':'#1565c0','FOR COMMENT':'#1565c0','FOR INFORMATION':'#455a64',
+  'CHECKED':'#2e7d32','FOR CONSTRUCTION':'#2e7d32','NOT FOR CONSTRUCTION':'#c62828','REJECTED':'#c62828','SUPERSEDED':'#c62828','AS BUILT':'#6a1b9a',
+};
+const DEF_STYLES = {
+  line:{color:'#e53935',lw:3,dash:'solid',opacity:1}, arrow:{color:'#e53935',lw:3,dash:'solid',opacity:1},
+  rect:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1}, ellipse:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1},
+  polygon:{color:'#e53935',lw:3,dash:'solid',fill:'none',opacity:1}, pen:{color:'#e53935',lw:3,opacity:1},
+  cloud:{color:'#e53935',lw:3,rev:'',fill:'none',fillColor:'#ffeb3b',shape:'box',fs:11}, text:{color:'#1565c0',fs:12,tfill:'none'}, callout:{color:'#1565c0',lw:2,fs:11},
+  stamp:{color:STAMPS['APPROVED'],stamp:'APPROVED',opacity:0.9}, image:{opacity:1}, signature:{}, legend:{fs:10},
+  marker:{color:'#ffeb3b',lw:14,opacity:0.4}, hlbox:{color:'#ffeb3b',opacity:0.35}, whiteout:{color:'#ffffff'}, patch:{},
+  sym:{color:'#e53935',lw:2,fs:9},
+  pipe:{svc:'lthwf',color:'#d32f2f',lw:3,dash:'solid',fs:8},
+  measure:{color:'#6a1b9a',lw:2,fs:10}, run:{color:'#6a1b9a',lw:2,fs:10}, area:{color:'#6a1b9a',lw:2,fs:10,fill:'tint'},
+};
+const DRAG_TOOLS = new Set(['line','arrow','rect','ellipse','cloud','hlbox','whiteout','measure','calibrate','movearea','callout']);
+const CLICK_TOOLS = new Set(['polygon','run','area','pipe']);
+const FREE_TOOLS = new Set(['pen','marker']);
+const toolType = t => t === 'movearea' ? 'patch' : t === 'symbols' ? 'sym' : (t === 'select' || t === 'pan' || t === 'calibrate') ? null : t;
+
+/* ---------- State ---------- */
+const S = {
+  doc:null, pdf:null, img:null,
+  cur:0, zoom:1, ox:0, oy:0,
+  tool:'select', sel:null, styles:JSON.parse(JSON.stringify(DEF_STYLES)),
+  drawing:null, drag:null, snap:null, space:false,
+  undo:[], redo:[], dirty:false, fileHandle:null, clip:null,
+  imgCache:{}, pointers:new Map(), pinch:null,
+};
+const view = $('#view'), canvas = $('#stage'), ctx = canvas.getContext('2d');
+
+const cur = () => S.doc && S.doc.pages[S.cur];
+const PW = p => p.rot % 180 ? p.h : p.w;
+const PH = p => p.rot % 180 ? p.w : p.h;
+const unitOf = p => Math.max(p.w, p.h) / 1500;
+const getSel = () => { const p = cur(); return p && S.sel ? p.anns.find(a => a.id === S.sel) || null : null; };
+
+/* ---------- Geometry ---------- */
+const dist = (a, b) => Math.hypot(b[0]-a[0], b[1]-a[1]);
+const polyLen = (pts, closed) => { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i-1], pts[i]); if (closed && pts.length > 2) L += dist(pts[pts.length-1], pts[0]); return L; };
+const polyArea = pts => { let s = 0; for (let i = 0; i < pts.length; i++){ const [x1,y1] = pts[i], [x2,y2] = pts[(i+1)%pts.length]; s += x1*y2 - x2*y1; } return Math.abs(s)/2; };
+const centroid = pts => [pts.reduce((s,p)=>s+p[0],0)/pts.length, pts.reduce((s,p)=>s+p[1],0)/pts.length];
+const box = P => { const x0 = Math.min(P[0][0],P[1][0]), y0 = Math.min(P[0][1],P[1][1]); return [x0, y0, Math.abs(P[1][0]-P[0][0]), Math.abs(P[1][1]-P[0][1])]; };
+function segDist(p, a, b){
+  const dx = b[0]-a[0], dy = b[1]-a[1], L2 = dx*dx + dy*dy;
+  let t = L2 ? ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / L2 : 0; t = clamp(t, 0, 1);
+  return Math.hypot(p[0]-(a[0]+t*dx), p[1]-(a[1]+t*dy));
+}
+function polyDist(p, pts, closed){ let d = Infinity; for (let i = 1; i < pts.length; i++) d = Math.min(d, segDist(p, pts[i-1], pts[i])); if (closed && pts.length > 2) d = Math.min(d, segDist(p, pts[pts.length-1], pts[0])); return d; }
+function inPoly(p, pts){ let c = false; for (let i = 0, j = pts.length-1; i < pts.length; j = i++){ const [xi,yi] = pts[i], [xj,yj] = pts[j]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj-xi)*(p[1]-yi)/(yj-yi)+xi) c = !c; } return c; }
+const inBox = (p, b, t=0) => p[0] >= b[0]-t && p[0] <= b[0]+b[2]+t && p[1] >= b[1]-t && p[1] <= b[1]+b[3]+t;
+const boxPts = b => [[b[0],b[1]],[b[0]+b[2],b[1]],[b[0]+b[2],b[1]+b[3]],[b[0],b[1]+b[3]]];
+function constrainAngle(from, p){ const dx = p[0]-from[0], dy = p[1]-from[1], L = Math.hypot(dx,dy), a = Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4); return [from[0]+L*Math.cos(a), from[1]+L*Math.sin(a)]; }
+function constrainSquare(from, p){ const dx = p[0]-from[0], dy = p[1]-from[1], s = Math.max(Math.abs(dx), Math.abs(dy)); return [from[0]+Math.sign(dx||1)*s, from[1]+Math.sign(dy||1)*s]; }
+
+/* ---------- Formatting ---------- */
+function fmtLen(units, page){
+  if (!page.mm) return `${units.toFixed(1)} (no scale)`;
+  const mm = units * page.mm;
+  return (S.doc.units === 'm') ? `${(mm/1000).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})} m` : `${Math.round(mm).toLocaleString('en-GB')} mm`;
+}
+function fmtArea(u2, page){
+  if (!page.mm) return `${u2.toFixed(0)} sq (no scale)`;
+  return `${(u2 * page.mm * page.mm / 1e6).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})} m²`;
+}
+function annValue(a, page){
+  if (a.type === 'measure') return fmtLen(dist(a.pts[0], a.pts[1]), page);
+  if (a.type === 'run') return fmtLen(polyLen(a.pts), page);
+  if (a.type === 'area') return `${fmtArea(polyArea(a.pts), page)} · P ${fmtLen(polyLen(a.pts, true), page)}`;
+  if (a.type === 'text' || a.type === 'callout' || a.type === 'cloud') return (a.text || '').replace(/\s+/g,' ');
+  if (a.type === 'stamp') return a.stamp;
+  if (a.sigLabel) return a.sigLabel;
+  if (a.type === 'sym') return [a.tag, a.style.size].filter(Boolean).join(' · ');
+  if (a.type === 'pipe'){ const sv = SERVICE_BY_ID[a.style.svc]; return [sv && sv.n, a.style.size, a.pts.length > 1 ? fmtLen(polyLen(a.pts), page) : ''].filter(Boolean).join(' · '); }
+  return '';
+}
+const legendLabel = c => { const e = settings.legend.find(l => l.c.toLowerCase() === String(c||'').toLowerCase()); return e ? e.label : ''; };
+
+/* ---------- Drawing primitives ---------- */
+function hexA(hex, a){ const h = hex.replace('#',''); const n = parseInt(h.length === 3 ? h.split('').map(x=>x+x).join('') : h, 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function setStroke(c, st, u){
+  c.strokeStyle = st.color; c.lineWidth = (st.lw || 2) * u;
+  const w = c.lineWidth;
+  c.setLineDash(st.dash === 'dashed' ? [w*4, w*2.5] : st.dash === 'dotted' ? [0.01, w*2.2] : []);
+}
+function fillOf(st){
+  if (!st.fill || st.fill === 'none') return null;
+  if (st.fill === 'white') return '#ffffff';
+  const col = st.fillColor || st.color;
+  if (!/^#/.test(col)) return col;
+  return hexA(col, st.fill === 'tint' ? 0.2 : st.fill === 'half' ? 0.5 : 1);
+}
+function arrowHead(c, from, to, size, color){
+  const a = Math.atan2(to[1]-from[1], to[0]-from[0]);
+  c.save(); c.setLineDash([]); c.fillStyle = color; c.beginPath();
+  c.moveTo(to[0], to[1]);
+  c.lineTo(to[0] - size*Math.cos(a-0.42), to[1] - size*Math.sin(a-0.42));
+  c.lineTo(to[0] - size*Math.cos(a+0.42), to[1] - size*Math.sin(a+0.42));
+  c.closePath(); c.fill(); c.restore();
+}
+function pathPts(c, pts, closed){ c.beginPath(); pts.forEach((p,i) => i ? c.lineTo(p[0],p[1]) : c.moveTo(p[0],p[1])); if (closed) c.closePath(); }
+function label(c, lines, cx, cy, fontPx, color){
+  if (!Array.isArray(lines)) lines = [lines];
+  c.save(); c.setLineDash([]); c.globalAlpha = 1;
+  c.font = `600 ${fontPx}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const w = Math.max(...lines.map(l => c.measureText(l).width)), lh = fontPx*1.2, pad = fontPx*0.35, h = lh*lines.length;
+  const b = [cx - w/2 - pad, cy - h/2 - pad*0.6, w + pad*2, h + pad*1.2];
+  c.fillStyle = 'rgba(255,255,255,0.92)'; c.fillRect(...b);
+  c.strokeStyle = color; c.lineWidth = fontPx*0.07; c.strokeRect(...b);
+  c.fillStyle = color; lines.forEach((l,i) => c.fillText(l, cx, cy - h/2 + lh*(i+0.5)));
+  c.restore(); return b;
+}
+function cloudShapePath(c, shape, x, y, w, h, d){
+  let pts = [];
+  if (shape === 'ellipse'){
+    const N = 120, poly = [];
+    for (let k = 0; k < N; k++){ const t = k/N*Math.PI*2; poly.push([x+w/2+w/2*Math.cos(t), y+h/2+h/2*Math.sin(t)]); }
+    const segL = poly.map((p, i) => dist(p, poly[(i+1)%N])), L = segL.reduce((a, b) => a+b, 0);
+    const n = Math.max(8, Math.round(L/d)), step = L/n;
+    let si = 0, acc = 0;
+    for (let k = 0; k < n; k++){
+      const target = k*step;
+      while (si < N-1 && acc + segL[si] < target){ acc += segL[si]; si++; }
+      const f = segL[si] ? (target-acc)/segL[si] : 0, a = poly[si], b = poly[(si+1)%N];
+      pts.push([a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f]);
+    }
+  } else {
+    const corners = [[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+    for (let i = 0; i < 4; i++){
+      const a = corners[i], b = corners[(i+1)%4], n = Math.max(1, Math.round(dist(a,b)/d));
+      for (let k = 0; k < n; k++) pts.push([a[0]+(b[0]-a[0])*k/n, a[1]+(b[1]-a[1])*k/n]);
+    }
+  }
+  c.beginPath();
+  for (let i = 0; i < pts.length; i++){
+    const p = pts[i], q = pts[(i+1)%pts.length], m = [(p[0]+q[0])/2, (p[1]+q[1])/2], r = dist(p,q)/2;
+    if (r < 1e-6) continue;
+    c.arc(m[0], m[1], r, Math.atan2(p[1]-m[1], p[0]-m[0]), Math.atan2(q[1]-m[1], q[0]-m[0]), false);
+  }
+  c.closePath();
+}
+function textBlock(c, a, x, y, fontPx, opts){
+  const lines = (a.text || '').split('\n');
+  c.font = `${fontPx}px ${FONT}`; c.textBaseline = 'top'; c.textAlign = 'left';
+  const lh = fontPx*1.25, pad = fontPx*0.3;
+  const w = Math.max(fontPx*0.6, ...lines.map(l => c.measureText(l).width)), h = lh*lines.length;
+  const b = [x - pad, y - pad, w + pad*2, h + pad*2];
+  if (opts.bg){ c.fillStyle = '#fff'; c.fillRect(...b); }
+  if (opts.border){ c.setLineDash([]); c.strokeStyle = opts.borderColor; c.lineWidth = opts.borderW; c.strokeRect(...b); }
+  c.fillStyle = a.style.color;
+  if (!a._editing) lines.forEach((l,i) => c.fillText(l, x, y + i*lh + fontPx*0.1));
+  return b;
+}
+
+/* ---------- HVAC symbol library ----------
+   Each symbol is drawn in its own units: the pipe runs along y = 0 and the
+   insertion point (where you click) is (0,0). b = [x0, y0, x1, y1] bounds. */
+function symKit(c, col){
+  const W = '#ffffff';
+  const poly = (pts, close = true, fill = W) => { c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); if (close) c.closePath(); if (fill){ c.fillStyle = fill; c.fill(); } c.stroke(); };
+  const K = {
+    c, col, poly,
+    ln: (x1, y1, x2, y2) => { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); },
+    circ: (x, y, r, fill = W) => { c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); if (fill){ c.fillStyle = fill; c.fill(); } c.stroke(); },
+    rect: (x, y, w, h, fill = W) => poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]], true, fill),
+    rrect: (x, y, w, h, r) => { roundRect(c, x, y, w, h, r); c.fillStyle = W; c.fill(); c.stroke(); },
+    bow: (w = 1, h = 0.6) => { poly([[-w,-h],[-w,h],[0,0]]); poly([[w,-h],[w,h],[0,0]]); },
+    txt: (str, x, y, size) => { c.save(); c.scale(0.01, 0.01); c.fillStyle = col; c.font = `bold ${size*100}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(str, x*100, y*100 + size*6); c.restore(); },
+    arr: (x1, y1, x2, y2, hs = 0.3) => { K.ln(x1, y1, x2, y2); const a = Math.atan2(y2-y1, x2-x1); poly([[x2,y2],[x2-hs*Math.cos(a-0.45), y2-hs*Math.sin(a-0.45)],[x2-hs*Math.cos(a+0.45), y2-hs*Math.sin(a+0.45)]], true, col); },
+    tee: () => K.circ(0, 0, 0.1, col),
+    act: label => { K.ln(0, 0, 0, -0.85); K.rect(-0.48, -1.45, 0.96, 0.6); K.txt(label, 0, -1.15, label.length > 1 ? 0.36 : 0.44); },
+    bowAt: (cx, w, h) => { poly([[cx-w,-h],[cx-w,h],[cx,0]]); poly([[cx+w,-h],[cx+w,h],[cx,0]]); },
+    fanBlades: (cx, cy, r) => { [0, 2.1, 4.2].forEach(a0 => { c.beginPath(); c.moveTo(cx, cy); c.quadraticCurveTo(cx + r*Math.cos(a0+0.5), cy + r*Math.sin(a0+0.5), cx + r*Math.cos(a0), cy + r*Math.sin(a0)); c.stroke(); }); K.circ(cx, cy, r*0.18, col); },
+    pumpIn: (cx, cy, r) => { K.circ(cx, cy, r); poly([[cx + r, cy],[cx - r*0.5, cy + r*0.866],[cx - r*0.5, cy - r*0.866]], true, null); },
+    dashed: fn => { c.save(); c.setLineDash([0.18, 0.12]); fn(); c.restore(); },
+    bubble: label => { K.tee(); K.ln(0, 0, 0, -0.7); K.circ(0, -1.3, 0.6); if (label) K.txt(label, 0, -1.3, label.length > 1 ? 0.42 : 0.6); },
+  };
+  return K;
+}
+const BUBBLE_B = [-0.66, -1.96, 0.66, 0.12], VALVE_B = [-1, -0.62, 1, 0.62];
+const SYMS = [
+  // Valves
+  {id:'iso', g:'Valves', n:'Isolating valve', s:'Isolating valve', k:'gate isolation shut off', b:VALVE_B, d:K => K.bow()},
+  {id:'ball', g:'Valves', n:'Ball valve', s:'Ball valve', k:'isolation', b:VALVE_B, d:K => { K.bow(); K.circ(0, 0, 0.27); }},
+  {id:'bfly', g:'Valves', n:'Butterfly valve', s:'Butterfly valve', k:'isolation', b:[-0.62,-0.66,0.62,0.66], d:K => { K.ln(-0.5,-0.6,-0.5,0.6); K.ln(0.5,-0.6,0.5,0.6); K.circ(0,0,0.3); K.ln(-0.36,0.36,0.36,-0.36); }},
+  {id:'globe', g:'Valves', n:'Globe valve', s:'Globe valve', k:'regulating', b:VALVE_B, d:K => { K.bow(); K.circ(0, 0, 0.2, K.col); }},
+  {id:'nrv', g:'Valves', n:'Non-return (check) valve', s:'Non-return valve', k:'nrv check', b:[-1,-1.25,1,1.25], d:K => { K.bow(); K.arr(-0.6,-0.95,0.65,-0.95,0.3); K.txt('NRV',0,0.98,0.36); }},
+  {id:'drv', g:'Valves', n:'Double regulating valve (DRV)', s:'DRV', k:'double regulating balancing', b:[-1,-1.42,1,0.62], d:K => { K.bow(); K.circ(0,0,0.18,K.col); K.ln(0,0,0,-0.72); K.ln(-0.42,-0.72,0.42,-0.72); K.txt('DRV',0,-1.12,0.36); }},
+  {id:'comm', g:'Valves', n:'Commissioning set (DRV + orifice)', s:'Commissioning set', k:'fodrv orifice balancing commissioning station', b:[-1,-1.42,2.2,0.62], d:K => { K.bow(); K.circ(0,0,0.18,K.col); K.ln(0,0,0,-0.72); K.ln(-0.42,-0.72,0.42,-0.72); K.txt('DRV',0,-1.12,0.36); K.ln(1,0,2.15,0); K.ln(1.5,-0.5,1.5,0.5); K.ln(1.66,-0.5,1.66,0.5); [1.2,1.96].forEach(x => { K.ln(x,0,x,-0.62); K.circ(x,-0.82,0.2); K.circ(x,-0.82,0.07,K.col); }); }},
+  {id:'drainv', g:'Valves', n:'Drain valve (on branch)', s:'Drain valve', k:'drain valve branch', b:[-0.45,-0.12,0.45,1.62], d:K => { K.tee(); K.ln(0,0,0,0.4); K.poly([[-0.4,0.4],[0.4,0.4],[0,0.9]]); K.poly([[-0.4,1.4],[0.4,1.4],[0,0.9]]); K.ln(0,1.4,0,1.5); K.ln(-0.3,1.5,0.3,1.5); K.ln(-0.3,1.6,0.3,1.6); }},
+  {id:'tundish', g:'Valves', n:'Drain point to waste (tundish)', s:'Drain to waste', k:'tundish drain waste discharge', b:[-0.6,-0.12,0.6,1.85], d:K => { K.tee(); K.ln(0,0,0,0.75); K.poly([[-0.55,0.95],[0.55,0.95],[0.16,1.38],[0.16,1.8],[-0.16,1.8],[-0.16,1.38]]); }},
+  {id:'drain', g:'Valves', n:'Drain cock', s:'Drain cock', k:'drain off dop', b:[-0.45,-0.12,0.45,1.75], d:K => { K.tee(); K.ln(0,0,0,0.45); K.poly([[-0.4,0.45],[0.4,0.45],[0,0.95]]); K.poly([[-0.4,1.45],[0.4,1.45],[0,0.95]]); K.ln(0,1.45,0,1.7); K.ln(-0.22,1.7,0.22,1.7); }},
+  {id:'relief', g:'Valves', n:'Safety / pressure relief valve', s:'Safety valve', k:'prv relief safety', b:[-1,-1.4,0.66,1], d:K => { K.poly([[-1,-0.6],[-1,0.6],[0,0]]); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.poly([[0,-0.05],[0.3,-0.25],[-0.3,-0.5],[0.3,-0.75],[-0.3,-1.0],[0,-1.2]], false, null); K.ln(-0.35,-1.25,0.35,-1.25); }},
+  {id:'lock', g:'Valves', n:'Lockshield valve', s:'Lockshield', k:'lockshield radiator balancing', b:[-1,-1.0,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.6); K.rect(-0.32,-0.95,0.64,0.35,K.col); }},
+  {id:'prv', g:'Valves', n:'Pressure reducing valve (PRV)', s:'Pressure reducing', k:'prv pressure reducing regulator', b:[-1,-1.85,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.55); const c = K.c; c.beginPath(); c.moveTo(-0.5,-0.55); c.arc(0,-0.55,0.5,Math.PI,0); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke(); K.poly([[0,-1.05],[0.25,-1.2],[-0.25,-1.38],[0.25,-1.56],[-0.25,-1.74],[0,-1.82]], false, null); }},
+  {id:'trv', g:'Valves', n:'Thermostatic radiator valve (TRV)', s:'TRV', k:'radiator thermostatic', b:[-1,-1.55,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.7); K.circ(0,-1.1,0.42); K.txt('T',0,-1.1,0.48); }},
+  // Control valves
+  {id:'cv2', g:'Control valves', n:'2-port control valve', s:'2-port control', k:'motorised actuator two port', b:[-1,-1.5,1,0.62], d:K => { K.bow(); K.act('M'); }},
+  {id:'mix3', g:'Control valves', n:'3-port mixing valve', s:'3-port mixing', k:'three port mixing actuator', b:[-1.75,-1.5,1.75,1.75], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.act('M'); K.arr(-1.72,0,-1.12,0,0.26); K.arr(0,1.72,0,1.12,0.26); K.arr(1.12,0,1.72,0,0.26); }},
+  {id:'div3', g:'Control valves', n:'3-port diverting valve', s:'3-port diverting', k:'three port diverting actuator', b:[-1.75,-1.5,1.75,1.75], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.act('M'); K.arr(-1.72,0,-1.12,0,0.26); K.arr(0,1.12,0,1.72,0.26); K.arr(1.12,0,1.72,0,0.26); }},
+  {id:'zone', g:'Control valves', n:'Motorised zone valve', s:'Zone valve', k:'motorised zone valve 2 port on off', b:[-1,-1.62,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.7); K.circ(0,-1.16,0.46); K.txt('M',0,-1.16,0.5); }},
+  {id:'picv', g:'Control valves', n:'Pressure independent control valve (PICV)', s:'PICV', k:'picv pressure independent', b:[-1,-1.5,1,0.62], d:K => { K.bow(); K.act('PI'); }},
+  {id:'dpcv', g:'Control valves', n:'Differential pressure control valve (DPCV)', s:'DPCV', k:'differential pressure control', b:[-1,-1.4,2.05,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.72); const c = K.c; c.beginPath(); c.moveTo(-0.55,-0.72); c.arc(0,-0.72,0.55,Math.PI,0); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke(); c.save(); c.setLineDash([0.16,0.12]); K.poly([[0.42,-1.0],[1.9,-1.0],[1.9,0]], false, null); c.restore(); K.circ(1.9,0,0.1,K.col); }},
+  // Pumps & ancillaries
+  {id:'pump', g:'Pumps & ancillaries', n:'Pump', s:'Pump', k:'circulator', b:[-1.05,-1.05,1.05,1.05], d:K => { K.circ(0,0,1); K.poly([[1,0],[-0.5,0.866],[-0.5,-0.866]], true, null); }},
+  {id:'pump2', g:'Pumps & ancillaries', n:'Twin pump (duty/standby)', s:'Twin pump', k:'twin duty standby', b:[-1.05,-2.1,1.05,0.12], d:K => { [0,-1.4].forEach(y => { K.circ(0,y-0.35,0.62); K.poly([[0.62,y-0.35],[-0.31,y+0.19],[-0.31,y-0.89]], true, null); }); K.tee(); }},
+  {id:'strainer', g:'Pumps & ancillaries', n:'Strainer', s:'Strainer', k:'y strainer filter', b:[-0.9,-0.6,0.9,1.15], d:K => { K.ln(-0.8,-0.5,-0.8,0.5); K.ln(0.8,-0.5,0.8,0.5); K.ln(-0.8,0,0.8,0); K.poly([[-0.35,0],[0.05,0],[0.6,0.9],[0.2,0.9]]); K.ln(0.12,1.05,0.72,0.75); }},
+  {id:'flex', g:'Pumps & ancillaries', n:'Flexible connection', s:'Flexible conn.', k:'anti vibration bellows', b:[-1,-0.6,1,0.6], d:K => { K.ln(-0.9,-0.5,-0.9,0.5); K.ln(0.9,-0.5,0.9,0.5); K.poly([[-0.9,0],[-0.7,-0.35],[-0.4,0.35],[-0.1,-0.35],[0.2,0.35],[0.5,-0.35],[0.7,0],[0.9,0]], false, null); }},
+  {id:'aav', g:'Pumps & ancillaries', n:'Automatic air vent (AAV)', s:'Air vent', k:'aav air vent bleed', b:[-0.5,-2.0,0.5,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-0.42,-1.2,0.84,0.7); K.txt('AV',0,-0.85,0.32); K.arr(0,-1.3,0,-1.95,0.26); }},
+  {id:'expv', g:'Pumps & ancillaries', n:'Expansion vessel', s:'Expansion vessel', k:'pressure vessel', b:[-0.7,-2.25,0.7,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rrect(-0.6,-2.15,1.2,1.65,0.45); K.ln(-0.6,-1.32,0.6,-1.32); }},
+  {id:'fm', g:'Pumps & ancillaries', n:'Flow meter', s:'Flow meter', k:'meter', b:[-0.9,-0.6,0.9,0.6], d:K => { K.rect(-0.85,-0.55,1.7,1.1); K.txt('FM',0,0,0.5); }},
+  {id:'hm', g:'Pumps & ancillaries', n:'Heat meter', s:'Heat meter', k:'energy meter', b:[-0.9,-0.6,0.9,0.6], d:K => { K.rect(-0.85,-0.55,1.7,1.1); K.txt('HM',0,0,0.5); }},
+  {id:'reducer', g:'Pipework', n:'Reducer', s:'Reducer', k:'concentric reducer', b:[-0.85,-0.65,0.85,0.65], d:K => K.poly([[-0.8,-0.6],[0.8,-0.3],[0.8,0.3],[-0.8,0.6]])},
+  {id:'cap', g:'Pipework', n:'Capped end', s:'Capped end', k:'blank cap end', b:[-0.9,-0.65,0.4,0.65], d:K => { K.ln(-0.9,0,0.2,0); K.ln(0.2,-0.6,0.2,0.6); K.ln(0.34,-0.6,0.34,0.6); }},
+  {id:'dirtsep', g:'Water treatment', n:'Dirt separator', s:'Dirt separator', k:'dirt separator magnetic filter air dirt', b:[-1,-1.08,1,1.62], d:K => { K.ln(-1,0,-0.55,0); K.ln(0.55,0,1,0); K.rrect(-0.55,-1.02,1.1,2.04,0.42); K.txt('DS',0,0,0.42); K.ln(0,1.02,0,1.35); K.ln(-0.25,1.35,0.25,1.35); K.ln(-0.25,1.48,0.25,1.48); }},
+  {id:'bypass', g:'Pumps & ancillaries', n:'Bypass valve (with bypass loop)', s:'Bypass valve', k:'bypass automatic abv pressure', b:[-1.35,-1.62,1.35,0.12], d:K => { K.tee(); K.ln(-1.2,0,1.2,0); K.circ(-1.2,0,0.08,K.col); K.circ(1.2,0,0.08,K.col); K.poly([[-1.2,0],[-1.2,-1.1],[-0.55,-1.1]], false, null); K.poly([[0.55,-1.1],[1.2,-1.1],[1.2,0]], false, null); K.poly([[-0.55,-1.45],[-0.55,-0.75],[0,-1.1]]); K.poly([[0.55,-1.45],[0.55,-0.75],[0,-1.1]]); }},
+  {id:'flow', g:'Pipework', n:'Flow direction arrow', s:'Flow arrow', k:'direction', b:[-1,-0.45,1,0.45], d:K => K.arr(-1,0,1,0,0.7)},
+  // Plant & equipment
+  {id:'hx', g:'Plant & equipment', n:'Heat exchanger (shell & tube)', s:'Heat exchanger', k:'calorifier shell tube hx', b:[-1.65,-0.95,1.65,0.95], d:K => { K.ln(-1.65,0,-1.25,0); K.ln(1.25,0,1.65,0); K.rrect(-1.25,-0.85,2.5,1.7,0.45); K.poly([[-1.25,0],[-0.9,-0.55],[-0.5,0.55],[-0.1,-0.55],[0.3,0.55],[0.7,-0.55],[1.0,0.3],[1.25,0]], false, null); }},
+  {id:'phe', g:'Plant & equipment', n:'Plate heat exchanger (PHE)', s:'Plate heat exch.', k:'phe plate heat exchanger', b:[-1.4,-1.25,1.4,1.25], d:K => { K.rect(-0.9,-1.15,1.8,2.3); [-0.6,-0.3,0,0.3,0.6].forEach(x => K.ln(x,-1.0,x,1.0)); K.ln(-1.4,-0.8,-0.9,-0.8); K.ln(-1.4,0.8,-0.9,0.8); K.ln(0.9,-0.8,1.4,-0.8); K.ln(0.9,0.8,1.4,0.8); K.ln(-0.9,1.15,0.9,-1.15); }},
+  {id:'ahu', g:'Ventilation & air conditioning', n:'Air handling unit (AHU)', s:'AHU', k:'ahu air handling unit', b:[-2.5,-1.55,2.5,1.05], d:K => { K.rect(-2.4,-1,4.8,2); K.ln(-1.2,-1,-1.2,1); K.ln(0,-1,0,1); K.ln(1.2,-1,1.2,1); K.poly([[-2.2,-0.8],[-1.85,0.8],[-1.75,-0.8],[-1.55,0.8],[-1.4,-0.8]], false, null); K.ln(-1.0,0.8,-0.2,-0.8); K.ln(0.2,0.8,1.0,-0.8); K.circ(1.8,0,0.62); K.poly([[2.3,0],[1.55,0.43],[1.55,-0.43]], true, null); K.txt('AHU',0,-1.3,0.4); }},
+  {id:'chiller', g:'Plant & equipment', n:'Chiller', s:'Chiller', k:'chiller cooling plant', b:[-1.55,-1.05,1.55,1.05], d:K => { K.rect(-1.45,-0.95,2.9,1.9); K.txt('CHILLER',0,-0.3,0.42); K.ln(-0.5,0.35,0.5,0.35); [[-0.3,0.15,0.3,0.55],[-0.3,0.55,0.3,0.15],[0,0.1,0,0.6]].forEach(l => K.ln(...l)); }},
+  {id:'boiler', g:'Plant & equipment', n:'Boiler', s:'Boiler', k:'boiler heating plant gas', b:[-1.05,-1.75,1.05,1.35], d:K => { K.rect(-0.95,-1.25,1.9,2.5); K.ln(0,-1.25,0,-1.7); K.ln(-0.2,-1.7,0.2,-1.7); K.txt('BOILER',0,0.85,0.34); const c = K.c; c.beginPath(); c.moveTo(0,0.4); c.bezierCurveTo(-0.55,0.3,-0.45,-0.25,-0.1,-0.75); c.bezierCurveTo(-0.05,-0.35,0.25,-0.35,0.2,-0.6); c.bezierCurveTo(0.55,-0.2,0.5,0.3,0,0.4); c.closePath(); c.fillStyle = K.col; c.fill(); }},
+  {id:'chp', g:'Plant & equipment', n:'Combined heat & power (CHP)', s:'CHP', k:'chp combined heat power generator', b:[-1.55,-1.05,1.55,1.05], d:K => { K.rect(-1.45,-0.95,2.9,1.9); K.txt('CHP',-0.45,0,0.55); K.circ(0.8,0,0.45); K.txt('G',0.8,0,0.45); }},
+  {id:'ashp', g:'Plant & equipment', n:'Air source heat pump (ASHP)', s:'Air source HP', k:'ashp air source heat pump', b:[-1.55,-1.05,1.55,1.05], d:K => { K.rect(-1.45,-0.95,2.9,1.9); K.circ(-0.55,0,0.65); K.circ(-0.55,0,0.12,K.col); [0,2.1,4.2].forEach(a0 => { const c = K.c; c.beginPath(); c.moveTo(-0.55,0); c.quadraticCurveTo(-0.55+0.55*Math.cos(a0+0.5), 0.55*Math.sin(a0+0.5), -0.55+0.55*Math.cos(a0), 0.55*Math.sin(a0)); c.stroke(); }); K.txt('ASHP',0.75,0,0.36); }},
+  {id:'fcu', g:'Heat emitters & terminals', n:'Fan coil unit (FCU)', s:'Fan coil unit', k:'fcu fan coil unit terminal', b:[-1.75,-1.05,1.75,1.05], d:K => { K.rect(-1.65,-0.95,3.3,1.9); K.ln(-0.15,-0.95,-0.15,0.95); K.ln(-1.35,0.75,-0.45,-0.75); K.ln(-1.05,0.75,-0.75,0.25); K.circ(0.75,0,0.6); K.poly([[1.25,0],[0.5,0.42],[0.5,-0.42]], true, null); K.txt('FCU',-0.5,0.62,0.3); }},
+  {id:'vav', g:'Ventilation & air conditioning', n:'VAV box (variable air volume)', s:'VAV box', k:'vav variable air volume terminal damper', b:[-1.75,-1.6,1.75,0.85], d:K => { K.poly([[-1.75,-0.4],[-1.2,-0.4],[-1.2,-0.75],[1.2,-0.75],[1.2,0.75],[-1.2,0.75],[-1.2,0.4],[-1.75,0.4]], false, null); K.ln(-1.75,-0.4,-1.75,0.4); K.ln(1.2,-0.75,1.75,-0.75); K.ln(1.2,0.75,1.75,0.75); K.ln(-0.75,0.5,-0.15,-0.5); K.circ(-0.45,0,0.08,K.col); K.ln(-0.45,-0.75,-0.45,-1.0); K.rect(-0.85,-1.5,0.8,0.5); K.txt('M',-0.45,-1.25,0.36); K.txt('VAV',0.6,0,0.42); }},
+  {id:'ct', g:'Plant & equipment', n:'Cooling tower', s:'Cooling tower', k:'cooling tower evaporative heat rejection', b:[-1.4,-1.75,1.4,1.3], d:K => { K.poly([[-1.0,-1.0],[1.0,-1.0],[1.3,1.2],[-1.3,1.2]]); K.circ(0,-1.38,0.32); K.ln(-0.32,-1.38,0.32,-1.38); K.ln(0,-1.7,0,-1.06); [-0.6,-0.2,0.2,0.6].forEach(x => K.ln(x,-0.45,x+0.1,-0.25)); K.poly([[-1.1,0.35],[-0.7,0.6],[-0.3,0.35],[0.1,0.6],[0.5,0.35],[0.9,0.6],[1.15,0.4]], false, null); K.txt('CT',0,0.95,0.34); }},
+  {id:'rad', g:'Heat emitters & terminals', n:'Radiator', s:'Radiator', k:'radiator panel heater emitter', b:[-1.4,-1.72,1.4,0.12], d:K => { K.rect(-1.3,-1.62,2.6,1.2); [-0.85,-0.45,-0.05,0.35,0.75].forEach(x => K.ln(x+0.1,-1.48,x+0.1,-0.56)); K.ln(-1.0,0,-1.0,-0.42); K.ln(1.0,0,1.0,-0.42); K.circ(-1.0,0,0.08,K.col); K.circ(1.0,0,0.08,K.col); }},
+  {id:'ufh', g:'Heat emitters & terminals', n:'Underfloor heating manifold', s:'UFH manifold', k:'ufh underfloor heating manifold', b:[-1.65,-0.85,1.5,1.9], d:K => { K.rect(-1.2,-0.75,2.6,0.32); K.rect(-1.2,-0.2,2.6,0.32); K.ln(-1.65,-0.59,-1.2,-0.59); K.ln(-1.65,-0.04,-1.2,-0.04); [-0.8,-0.15,0.5,1.15].forEach(x => { K.ln(x,0.12,x,0.45); K.poly([[x-0.12,0.45],[x-0.12,1.25],[x+0.12,1.25],[x+0.12,0.6]], false, null); }); K.txt('UFH',0.1,1.6,0.34); }},
+  {id:'buffer', g:'Plant & equipment', n:'Buffer vessel', s:'Buffer vessel', k:'buffer vessel thermal store tank', b:[-1.2,-1.75,1.2,1.75], d:K => { K.rrect(-0.75,-1.65,1.5,3.3,0.6); [-1.0,1.0].forEach(y => { K.ln(-1.2,y,-0.75,y); K.ln(0.75,y,1.2,y); }); K.txt('BV',0,0,0.5); }},
+  {id:'presu', g:'Plant & equipment', n:'Pressurisation unit', s:'Pressurisation unit', k:'pressurisation unit sealed system fill', b:[-1.2,-2.4,1.2,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-1.1,-2.3,2.2,1.8); K.circ(-0.45,-1.55,0.38); K.poly([[-0.07,-1.55],[-0.64,-1.22],[-0.64,-1.88]], true, null); K.txt('PU',-0.45,-0.83,0.3); K.rrect(0.2,-2.1,0.65,1.4,0.3); K.ln(0.2,-1.4,0.85,-1.4); }},
+  {id:'softener', g:'Plant & equipment', n:'Water softener', s:'Water softener', k:'water softener treatment cold water', b:[-1.1,-1.5,1.1,1.1], d:K => { K.ln(-1.1,0,-0.6,0); K.ln(0.6,0,1.1,0); K.rrect(-0.6,-1.4,1.2,2.4,0.45); K.txt('WS',0,-0.15,0.45); K.ln(-0.35,0.6,0.35,0.6); }},
+  // Sensors & instruments
+  {id:'tp', g:'Sensors & controls', n:'Test point', s:'Test point', k:'binder pressure temperature tapping', b:[-0.35,-1.15,0.35,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.circ(0,-0.8,0.3); K.circ(0,-0.8,0.1,K.col); }},
+  {id:'tsens', g:'Sensors & controls', n:'Temperature sensor', s:'Temp. sensor', k:'temperature sensor bms', b:BUBBLE_B, d:K => K.bubble('T')},
+  {id:'psens', g:'Sensors & controls', n:'Pressure sensor', s:'Pressure sensor', k:'pressure transducer', b:BUBBLE_B, d:K => K.bubble('P')},
+  {id:'pswitch', g:'Sensors & controls', n:'Pressure switch', s:'Pressure switch', k:'pressure switch', b:BUBBLE_B, d:K => K.bubble('PS')},
+  {id:'dps', g:'Sensors & controls', n:'Differential pressure sensor / switch', s:'Diff. pressure', k:'dp differential pressure', b:BUBBLE_B, d:K => K.bubble('ΔP')},
+  {id:'fswitch', g:'Sensors & controls', n:'Flow switch', s:'Flow switch', k:'flow switch', b:BUBBLE_B, d:K => K.bubble('FS')},
+  {id:'gauge', g:'Sensors & controls', n:'Pressure gauge', s:'Pressure gauge', k:'gauge manometer', b:BUBBLE_B, d:K => { K.bubble(''); K.ln(0,-1.3,0.36,-1.62); K.circ(0,-1.3,0.08,K.col); }},
+  {id:'therm', g:'Sensors & controls', n:'Thermometer', s:'Thermometer', k:'temperature gauge', b:[-0.4,-1.95,0.4,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.35); K.rrect(-0.16,-1.9,0.32,1.5,0.16); K.circ(0,-0.55,0.24,K.col); K.ln(0,-0.75,0,-1.6); }},
+
+  // Valves (more)
+  {id:'tmv', g:'Valves', n:'Thermostatic mixing valve (TMV)', s:'TMV', k:'tmv thermostatic mixing blending', b:[-1,-1.55,1,1.6], d:K => { K.bow(); K.poly([[-0.6,1],[0.6,1],[0,0]]); K.ln(0,0,0,-0.7); K.circ(0,-1.1,0.4); K.txt('T',0,-1.1,0.45); K.txt('TMV',0,1.35,0.3); }},
+  {id:'dcv', g:'Valves', n:'Double check valve', s:'Double check', k:'dcv double check backflow wras', b:[-1.2,-1.05,1.2,1.15], d:K => { K.bowAt(-0.6,0.55,0.45); K.bowAt(0.6,0.55,0.45); K.arr(-0.9,-0.8,0.9,-0.8,0.26); K.txt('DCV',0,0.85,0.32); }},
+  {id:'solenoid', g:'Valves', n:'Solenoid valve', s:'Solenoid valve', k:'solenoid valve electric', b:[-1,-1.42,1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.75); K.rect(-0.42,-1.35,0.84,0.6); K.txt('S',0,-1.05,0.42); }},
+  {id:'float', g:'Valves', n:'Float valve', s:'Float valve', k:'float valve ball cock tank inlet', b:[-1,-1.35,2.1,0.62], d:K => { K.bow(); K.ln(0,0,0,-0.5); K.ln(0,-0.5,1.5,-0.95); K.circ(1.75,-1.0,0.3); }},
+  {id:'flushbyp', g:'Valves', n:'Flushing bypass (pre-commission cleaning)', s:'Flushing bypass', k:'flushing bypass cleaning temporary', b:[-1.35,-2.0,1.35,0.12], d:K => { K.ln(-1.2,0,1.2,0); K.circ(-1.2,0,0.08,K.col); K.circ(1.2,0,0.08,K.col); K.dashed(() => { K.poly([[-1.2,0],[-1.2,-1.1],[-0.55,-1.1]], false, null); K.poly([[0.55,-1.1],[1.2,-1.1],[1.2,0]], false, null); }); K.bowAt(0,0.55,0.35); K.c.save(); K.c.translate(0,-1.1); K.bowAt(0,0.55,0.35); K.c.restore(); K.txt('FLUSHING',0,-1.75,0.28); }},
+  // Water treatment
+  {id:'airsep', g:'Water treatment', n:'Air separator', s:'Air separator', k:'air separator deaerator vent', b:[-1.1,-1.85,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.0,0.4); K.txt('AS',0,-0.1,0.4); K.arr(0,-1.1,0,-1.8,0.25); }},
+  {id:'airdirt', g:'Water treatment', n:'Air & dirt separator (combined)', s:'Air & dirt sep.', k:'air dirt separator combined', b:[-1.1,-1.85,1.1,1.55], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.2,0.4); K.txt('ADS',0,0,0.32); K.arr(0,-1.1,0,-1.8,0.25); K.ln(0,1.1,0,1.4); K.ln(-0.25,1.4,0.25,1.4); }},
+  {id:'llh', g:'Water treatment', n:'Low loss header / hydraulic separator', s:'Low loss header', k:'llh low loss header hydraulic separator', b:[-1.2,-2.4,1.2,2.2], d:K => { K.rect(-0.45,-1.8,0.9,3.6); [-1.1,1.1].forEach(y => { K.ln(-1.2,y,-0.45,y); K.ln(0.45,y,1.2,y); }); K.txt('LLH',0,0,0.28); K.arr(0,-1.8,0,-2.35,0.22); K.ln(0,1.8,0,2.1); K.ln(-0.2,2.1,0.2,2.1); }},
+  {id:'magfilter', g:'Water treatment', n:'Magnetic filter', s:'Magnetic filter', k:'magnetic filter magnetite', b:[-1.1,-1.0,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-0.9,1.1,1.8,0.35); K.txt('MF',0,0,0.42); }},
+  {id:'sidestream', g:'Water treatment', n:'Side-stream filter', s:'Side-stream filter', k:'side stream filter', b:[-1.25,-1.65,1.25,0.12], d:K => { K.ln(-1.25,0,1.25,0); K.circ(-0.9,0,0.08,K.col); K.circ(0.9,0,0.08,K.col); K.poly([[-0.9,0],[-0.9,-1.2],[-0.45,-1.2]], false, null); K.poly([[0.45,-1.2],[0.9,-1.2],[0.9,0]], false, null); K.rect(-0.45,-1.55,0.9,0.7); K.txt('SSF',0,-1.2,0.28); }},
+  {id:'degasser', g:'Water treatment', n:'Vacuum degasser', s:'Vacuum degasser', k:'vacuum degasser deaeration', b:[-0.9,-2.0,0.9,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-0.8,-1.9,1.6,1.4); K.txt('VD',0,-1.2,0.45); }},
+  {id:'dosing', g:'Water treatment', n:'Dosing pot', s:'Dosing pot', k:'dosing pot chemical inhibitor', b:[-1.25,-2.6,1.25,0.12], d:K => { K.ln(-1.25,0,1.25,0); K.circ(-0.6,0,0.08,K.col); K.circ(0.6,0,0.08,K.col); K.ln(-0.6,0,-0.6,-0.55); K.ln(0.6,0,0.6,-0.55); K.rrect(-0.75,-2.15,1.5,1.6,0.3); K.poly([[-0.3,-2.15],[-0.45,-2.5],[0.45,-2.5],[0.3,-2.15]]); K.txt('DP',0,-1.35,0.42); }},
+  // Plant (more)
+  {id:'cylinder', g:'Plant & equipment', n:'Hot water cylinder / calorifier', s:'HW cylinder', k:'hot water cylinder calorifier unvented storage', b:[-0.9,-1.9,0.9,1.9], d:K => { K.rrect(-0.8,-1.8,1.6,3.6,0.6); K.poly([[-0.8,0.5],[-0.45,0.95],[-0.1,0.5],[0.25,0.95],[0.55,0.5],[0.8,0.75]], false, null); K.txt('HWC',0,-0.6,0.4); }},
+  {id:'hiu', g:'Plant & equipment', n:'Heat interface unit (HIU)', s:'HIU', k:'hiu heat interface unit district heating flats', b:[-1.4,-1.1,1.4,1.1], d:K => { K.rect(-1.3,-1.0,2.6,2.0); [-0.95,-0.75,-0.55,-0.35].forEach(x => K.ln(x,-0.6,x,0.6)); K.rect(-1.05,-0.7,0.8,1.4,null); K.txt('HIU',0.5,0,0.45); }},
+  {id:'cwst', g:'Plant & equipment', n:'Cold water storage tank', s:'CW storage tank', k:'cold water storage tank cistern', b:[-1.5,-1.1,1.5,1.1], d:K => { K.poly([[-1.4,-1.0],[-1.4,1.0],[1.4,1.0],[1.4,-1.0]], false, '#fff'); K.dashed(() => K.ln(-1.4,-0.4,1.4,-0.4)); K.poly([[0.9,-0.75],[1.1,-0.75],[1.0,-0.5]], true, K.col); K.txt('CWST',0,0.35,0.4); }},
+  {id:'booster', g:'Plant & equipment', n:'Booster set', s:'Booster set', k:'booster set pump cold water', b:[-1.6,-1.1,1.6,1.1], d:K => { K.rect(-1.5,-1.0,3.0,2.0); K.pumpIn(-0.65,0.15,0.48); K.pumpIn(0.65,0.15,0.48); K.txt('BOOSTER',0,-0.7,0.26); }},
+  {id:'gshp', g:'Plant & equipment', n:'Ground source heat pump (GSHP)', s:'Ground source HP', k:'gshp ground source heat pump', b:[-1.55,-1.2,1.55,1.2], d:K => { K.rect(-1.45,-1.1,2.9,1.5); K.txt('GSHP',0,-0.35,0.42); K.ln(-1.45,0.75,1.45,0.75); for (let x = -1.3; x < 1.4; x += 0.35) K.ln(x,0.75,x-0.25,1.1); }},
+  {id:'solar', g:'Plant & equipment', n:'Solar thermal panel', s:'Solar thermal', k:'solar thermal collector panel', b:[-1.45,-1.65,1.6,0.7], d:K => { K.poly([[-1.4,0.6],[-0.8,-0.9],[1.4,-0.9],[0.8,0.6]]); [0.25,0.5,0.75].forEach(t => K.ln(-1.4+t*2.2,0.6,-0.8+t*2.2,-0.9)); K.ln(-1.1,-0.15,1.1,-0.15); K.circ(1.25,-1.35,0.22,K.col); }},
+  {id:'immersion', g:'Plant & equipment', n:'Immersion heater', s:'Immersion heater', k:'immersion heater electric element', b:[-1.1,-0.7,1.1,0.7], d:K => { K.rect(-1.0,-0.6,2.0,1.2); K.poly([[-0.8,0],[-0.6,-0.35],[-0.3,0.35],[0,-0.35],[0.3,0.35],[0.6,-0.35],[0.8,0]], false, null); }},
+  // Heat emitters & terminals (more)
+  {id:'fanconv', g:'Heat emitters & terminals', n:'Fan convector', s:'Fan convector', k:'fan convector heater', b:[-1.5,-0.9,1.5,0.9], d:K => { K.rect(-1.4,-0.8,2.8,1.6); K.pumpIn(-0.6,0,0.45); K.txt('FCV',0.6,0,0.38); }},
+  {id:'trench', g:'Heat emitters & terminals', n:'Trench heater', s:'Trench heater', k:'trench heater perimeter', b:[-1.7,-0.55,1.7,0.55], d:K => { K.rect(-1.6,-0.45,3.2,0.9); for (let x = -1.4; x <= 1.41; x += 0.25) K.ln(x,-0.3,x,0.3); }},
+  {id:'beam', g:'Heat emitters & terminals', n:'Chilled beam', s:'Chilled beam', k:'chilled beam active passive', b:[-1.7,-0.5,1.7,1.05], d:K => { K.rect(-1.6,-0.4,3.2,0.8); K.txt('CB',0,0,0.4); K.arr(-1.0,0.4,-1.25,1.0,0.22); K.arr(1.0,0.4,1.25,1.0,0.22); }},
+  // Ventilation & air conditioning (more)
+  {id:'fan', g:'Ventilation & air conditioning', n:'Fan (supply / extract)', s:'Fan', k:'fan supply extract', b:[-0.95,-0.95,0.95,0.95], d:K => { K.circ(0,0,0.9); K.fanBlades(0,0,0.75); }},
+  {id:'mvhr', g:'Ventilation & air conditioning', n:'MVHR unit', s:'MVHR', k:'mvhr heat recovery ventilation', b:[-1.5,-1.0,1.5,1.5], d:K => { K.rect(-1.4,-0.9,2.8,1.8); K.rect(-0.5,-0.6,1.0,1.2,null); K.ln(-0.5,-0.6,0.5,0.6); K.ln(-0.5,0.6,0.5,-0.6); K.txt('MVHR',0,1.2,0.34); }},
+  {id:'vrfin', g:'Ventilation & air conditioning', n:'VRF / split indoor unit', s:'Indoor unit', k:'vrf split indoor unit air conditioning', b:[-1.6,-0.65,1.6,0.65], d:K => { K.rect(-1.5,-0.55,3.0,1.1); K.ln(-1.2,0.22,1.2,0.22); K.ln(-1.2,0.36,1.2,0.36); K.txt('IU',0,-0.15,0.4); }},
+  {id:'vrfout', g:'Ventilation & air conditioning', n:'VRF / split outdoor unit', s:'Outdoor unit', k:'vrf split outdoor condensing unit', b:[-1.3,-1.1,1.3,1.1], d:K => { K.rect(-1.2,-1.0,2.4,2.0); K.circ(-0.3,0,0.65); K.fanBlades(-0.3,0,0.55); K.txt('ODU',0.78,0,0.28); }},
+  // Sensors & controls (more)
+  {id:'roomsens', g:'Sensors & controls', n:'Room temperature sensor', s:'Room sensor', k:'room temperature sensor wall', b:[-0.65,-0.65,0.65,0.65], d:K => { K.rect(-0.6,-0.6,1.2,1.2); K.txt('T',0,0,0.6); }},
+  {id:'oas', g:'Sensors & controls', n:'Outside air temperature sensor', s:'Outside air sensor', k:'outside air temperature sensor weather compensation', b:[-0.65,-0.65,0.65,0.65], d:K => { K.rect(-0.6,-0.6,1.2,1.2); K.txt('OA',0,0,0.45); }},
+  {id:'frost', g:'Sensors & controls', n:'Frost thermostat', s:'Frost stat', k:'frost thermostat protection', b:BUBBLE_B, d:K => K.bubble('FT')},
+  {id:'bms', g:'Sensors & controls', n:'BMS controller / outstation', s:'BMS controller', k:'bms controller outstation panel', b:[-1.3,-0.8,1.3,0.8], d:K => { K.rect(-1.2,-0.7,2.4,1.4); K.txt('BMS',0,0,0.55); }},
+  // Pipework
+  {id:'rise', g:'Pipework', n:'Pipe rise (up)', s:'Rise', k:'rise riser up', b:[-0.5,-0.7,0.9,0.5], d:K => { K.circ(0,0,0.45); K.circ(0,0,0.13,K.col); K.arr(0.72,0.4,0.72,-0.65,0.22); }},
+  {id:'drop', g:'Pipework', n:'Pipe drop (down)', s:'Drop', k:'drop down', b:[-0.5,-0.5,0.9,0.7], d:K => { K.circ(0,0,0.45); K.ln(-0.32,-0.32,0.32,0.32); K.ln(-0.32,0.32,0.32,-0.32); K.arr(0.72,-0.4,0.72,0.65,0.22); }},
+  {id:'connex', g:'Pipework', n:'Connect to existing', s:'Connect to existing', k:'connect existing', b:[-1.2,-1.15,0.95,0.25], d:K => { K.ln(-1.2,0,-0.1,0); K.circ(0,0,0.18,K.col); K.txt('CONNECT TO',-0.1,-0.92,0.26); K.txt('EXISTING',-0.1,-0.6,0.26); }},
+  {id:'pbreak', g:'Pipework', n:'Pipe break', s:'Pipe break', k:'break', b:[-1.2,-0.5,1.2,0.5], d:K => { K.ln(-1.2,0,-0.3,0); K.ln(0.3,0,1.2,0); K.ln(-0.45,0.45,-0.15,-0.45); K.ln(0.15,0.45,0.45,-0.45); }},
+  {id:'cont', g:'Pipework', n:'Continuation arrow', s:'Continuation', k:'continuation continued', b:[-1,-0.8,1.05,0.45], d:K => { K.ln(-1,0,0.45,0); K.poly([[0.4,-0.4],[1,0],[0.4,0.4]], true, null); K.txt('CONT.',-0.3,-0.48,0.3); }},
+  {id:'anchor', g:'Pipework', n:'Pipe anchor', s:'Anchor', k:'anchor fixed point', b:[-1,-0.5,1,0.5], d:K => { K.ln(-1,0,1,0); K.ln(-0.4,-0.4,0.4,0.4); K.ln(-0.4,0.4,0.4,-0.4); }},
+  {id:'guide', g:'Pipework', n:'Pipe guide', s:'Guide', k:'guide', b:[-1,-0.55,1,0.55], d:K => { K.ln(-1,0,1,0); K.ln(-0.4,-0.32,0.4,-0.32); K.ln(-0.4,0.32,0.4,0.32); [-0.4,0.4].forEach(x => { K.ln(x,-0.32,x,-0.5); K.ln(x,0.32,x,0.5); }); }},
+  {id:'bellows', g:'Pipework', n:'Expansion bellows', s:'Expansion bellows', k:'expansion bellows compensator', b:[-1.2,-0.55,1.2,0.55], d:K => { K.ln(-1.2,0,-0.6,0); K.ln(0.6,0,1.2,0); K.rect(-0.6,-0.45,1.2,0.9); [-0.3,0,0.3].forEach(x => K.ln(x,-0.45,x,0.45)); }},
+];
+const SYM_BY_ID = Object.fromEntries(SYMS.map(x => [x.id, x]));
+const SYM_GROUPS = ['Valves','Control valves','Pumps & ancillaries','Water treatment','Plant & equipment','Heat emitters & terminals','Ventilation & air conditioning','Sensors & controls','Pipework'];
+/* Tag prefixes used when tags are numbered automatically (IV1, IV2, P1…). */
+const SYM_PREFIX = {iso:'IV', ball:'BLV', bfly:'BFV', globe:'GV', nrv:'NRV', drv:'DRV', comm:'CS', drainv:'DV', tundish:'TD', drain:'DC', relief:'SV', lock:'LS', prv:'PRV', trv:'TRV', tmv:'TMV', dcv:'DCV', solenoid:'SOV', float:'FV', flushbyp:'FB',
+  cv2:'CV', mix3:'CV', div3:'CV', zone:'ZV', picv:'PICV', dpcv:'DPCV',
+  pump:'P', pump2:'P', strainer:'ST', bypass:'BPV', aav:'AAV', expv:'EV', fm:'FM', hm:'HM',
+  dirtsep:'DS', airsep:'AS', airdirt:'ADS', llh:'LLH', magfilter:'MF', sidestream:'SSF', degasser:'VD', dosing:'DOS',
+  hx:'HX', phe:'PHE', chiller:'CH', ct:'CT', boiler:'B', chp:'CHP', ashp:'ASHP', buffer:'BUF', presu:'PU', softener:'WS', cylinder:'HWC', hiu:'HIU', cwst:'CWST', booster:'BS', gshp:'GSHP', solar:'STP', immersion:'IH',
+  rad:'RAD', ufh:'UFH', fcu:'FCU', fanconv:'FCV', trench:'TH', beam:'CB', ahu:'AHU', vav:'VAV', fan:'F', mvhr:'MVHR', vrfin:'IU', vrfout:'ODU',
+  tp:'TP', tsens:'TS', psens:'PT', pswitch:'PS', dps:'DPS', fswitch:'FS', gauge:'PG', therm:'TG', roomsens:'RTS', oas:'OAT', frost:'FST', bms:'OS'};
+function nextTag(prefix){
+  let mx = 0; const re = new RegExp('^' + prefix + '(\\d+)$');
+  S.doc.pages.forEach(p => p.anns.forEach(a => { if (a.type === 'sym' && a.tag){ const m = re.exec(a.tag); if (m) mx = Math.max(mx, +m[1]); } }));
+  return prefix + (mx + 1);
+}
+/* Pipe services for the Pipe tool: colour, line style and label. */
+const SERVICES = [
+  {id:'lthwf', n:'LTHW flow', c:'#d32f2f', dash:'solid', lbl:'LTHW F'},
+  {id:'lthwr', n:'LTHW return', c:'#d32f2f', dash:'dashed', lbl:'LTHW R'},
+  {id:'chwf', n:'CHW flow', c:'#1565c0', dash:'solid', lbl:'CHW F'},
+  {id:'chwr', n:'CHW return', c:'#1565c0', dash:'dashed', lbl:'CHW R'},
+  {id:'cws', n:'Cold water service (CWS)', c:'#00838f', dash:'solid', lbl:'CWS'},
+  {id:'mcws', n:'Mains cold water (MCWS)', c:'#2e7d32', dash:'solid', lbl:'MCWS'},
+  {id:'hws', n:'Hot water service (HWS)', c:'#ef6c00', dash:'solid', lbl:'HWS'},
+  {id:'hwsr', n:'HWS return', c:'#ef6c00', dash:'dashed', lbl:'HWSR'},
+  {id:'cond', n:'Condensate', c:'#6d4c41', dash:'dotted', lbl:'COND'},
+  {id:'gas', n:'Gas', c:'#f9a825', dash:'solid', lbl:'GAS'},
+  {id:'refrig', n:'Refrigerant', c:'#8e24aa', dash:'solid', lbl:'REF'},
+  {id:'other', n:'Other (no label)', c:'#000000', dash:'solid', lbl:''},
+];
+const SERVICE_BY_ID = Object.fromEntries(SERVICES.map(x => [x.id, x]));
+function symScaleOrigin(a){ const def = SYM_BY_ID[a.sym], [x,y,w] = box(a.pts), [x0,y0,x1] = def ? def.b : [0,0,1]; const k = w/(x1-x0 || 1); return {k, o:[x - x0*k, y - y0*k]}; }
+/* Valve & component schedule: a table drawn on the page that lists every
+   HVAC symbol on that page (symbol, description, quantity, tags). It is
+   anchored by its top-right corner and rebuilds itself on every redraw. */
+function scheduleRows(page){
+  const by = {}, order = [];
+  for (const a of page.anns) if (a.type === 'sym' && SYM_BY_ID[a.sym]){
+    const size = (a.style.size || '').trim(), key = a.sym + '|' + size;
+    if (!by[key]){ by[key] = {def:SYM_BY_ID[a.sym], size, n:0, tags:[], color:a.style.color}; order.push(key); }
+    by[key].n++; if (a.tag) by[key].tags.push(a.tag);
+  }
+  const idx = id => SYMS.findIndex(d => d.id === id);
+  return order.sort((p, q) => idx(by[p].def.id) - idx(by[q].def.id) || by[p].size.localeCompare(by[q].size, 'en', {numeric:true})).map(k => by[k]);
+}
+/* "IV1, IV2, IV3, IV7" -> "IV1–IV3, IV7" */
+function compressTags(tags){
+  const groups = {}, other = [];
+  [...new Set(tags)].forEach(t => { const m = /^(.*?)(\d+)$/.exec(t); if (m) (groups[m[1]] = groups[m[1]] || []).push(+m[2]); else other.push(t); });
+  const out = [];
+  Object.keys(groups).forEach(pre => {
+    const ns = groups[pre].sort((x, y) => x - y);
+    for (let i = 0; i < ns.length;){
+      let j = i; while (j + 1 < ns.length && ns[j+1] === ns[j] + 1) j++;
+      out.push(j - i >= 2 ? `${pre}${ns[i]}–${pre}${ns[j]}` : ns.slice(i, j + 1).map(n => pre + n).join(', '));
+      i = j + 1;
+    }
+  });
+  return out.concat(other).join(', ');
+}
+const DEFAULT_SCHED_NOTE = 'Pipe sizes are nominal bore (mm) unless stated otherwise. All sizes to be confirmed by the designer before installation.';
+function schedulePipes(page){
+  const by = {}, order = [];
+  for (const a of page.anns) if (a.type === 'pipe'){
+    const size = (a.style.size || '').trim(), key = a.style.svc + '|' + size;
+    if (!by[key]){ by[key] = {sv:SERVICE_BY_ID[a.style.svc] || SERVICES[SERVICES.length-1], size, len:0, color:a.style.color, dash:a.style.dash}; order.push(key); }
+    by[key].len += polyLen(a.pts);
+  }
+  const idx = id => SERVICES.findIndex(x => x.id === id);
+  return order.sort((p, q) => idx(by[p].sv.id) - idx(by[q].sv.id) || by[p].size.localeCompare(by[q].size, 'en', {numeric:true})).map(k => by[k]);
+}
+function wrapText(c, text, maxW){
+  const out = []; let line = '';
+  for (const w of text.split(/\s+/)){ const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line){ out.push(line); line = w; } else line = t; }
+  if (line) out.push(line); return out;
+}
+function drawSchedule(c, a, page){
+  const u = unitOf(page), fp = (a.style.fs || 8)*u*1.6, pad = fp*0.5, rh = fp*1.9, iw = fp*2.8;
+  const rows = scheduleRows(page), pipes = schedulePipes(page), title = 'VALVE & COMPONENT SCHEDULE';
+  const withSize = rows.some(r => r.size) || pipes.some(p => p.size);
+  const note = (a.note ?? DEFAULT_SCHED_NOTE).trim();
+  const refTxt = r => { const t = compressTags(r.tags); return t.length > 60 ? t.slice(0, 59) + '…' : t; };
+  const lenTxt = p => page.mm ? fmtLen(p.len, page) : 'set a scale for length';
+  const hdr = withSize ? ['Symbol', 'Description', 'Size', 'Qty', 'Ref / tag'] : ['Symbol', 'Description', 'Qty', 'Ref / tag'];
+  c.save(); c.globalAlpha = 1; c.setLineDash([]);
+  c.font = `bold ${fp}px ${FONT}`; const hw = hdr.map(t => c.measureText(t).width), pipeHdr = c.measureText('PIPEWORK').width; c.font = `${fp}px ${FONT}`;
+  const mw = t => c.measureText(t).width;
+  const cols = [Math.max(iw, hw[0], pipes.length ? pipeHdr*0 : 0) + pad*2, Math.max(hw[1], ...rows.map(r => mw(r.def.n)), ...pipes.map(p => mw(p.sv.n))) + pad*2];
+  if (withSize) cols.push(Math.max(hw[2], ...rows.map(r => mw(r.size)), ...pipes.map(p => mw(p.size || '–'))) + pad*2);
+  const qi = cols.length;
+  cols.push(mw('Qty')*1.3 + pad*2);
+  cols.push(Math.max(hw[hw.length-1], ...rows.map(r => mw(refTxt(r)))) + pad*2);
+  const needLen = Math.max(0, mw('Length'), ...pipes.map(p => mw(lenTxt(p)))) + pad*2;
+  if (pipes.length && cols[qi] + cols[qi+1] < needLen) cols[qi+1] += needLen - cols[qi] - cols[qi+1];
+  c.font = `bold ${fp*1.05}px ${FONT}`;
+  const tw = c.measureText(title).width + pad*2;
+  let w = cols.reduce((s2, v) => s2 + v, 0); if (w < tw){ cols[1] += tw - w; w = tw; }
+  const nf = fp*0.92; c.font = `${nf}px ${FONT}`;
+  const noteLines = note ? wrapText(c, 'Note: ' + note, w - pad*2) : [];
+  const nSym = rows.length || (pipes.length ? 0 : 1);
+  const symEnd = rh*(2 + nSym), pipeEnd = symEnd + (pipes.length ? rh*(1 + pipes.length) : 0);
+  const h = pipeEnd + (noteLines.length ? noteLines.length*nf*1.3 + pad*1.4 : 0);
+  const x = a.pts[0][0] - w, y = a.pts[0][1];
+  c.fillStyle = '#fff'; c.fillRect(x, y, w, h);
+  c.fillStyle = '#14284b'; c.fillRect(x, y, w, rh);
+  c.font = `bold ${fp*1.05}px ${FONT}`; c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(title, x + pad, y + rh/2);
+  c.font = `bold ${fp}px ${FONT}`; c.fillStyle = '#14284b';
+  let cx = x; hdr.forEach((t, i) => { c.fillText(t, cx + pad, y + rh*1.5); cx += cols[i]; });
+  c.strokeStyle = '#14284b'; c.lineWidth = fp*0.05;
+  const hline = yy => { c.beginPath(); c.moveTo(x, yy); c.lineTo(x + w, yy); c.stroke(); };
+  const vline = (xx, y1, y2) => { c.beginPath(); c.moveTo(xx, y1); c.lineTo(xx, y2); c.stroke(); };
+  for (let i = 2; i <= 1 + nSym; i++) hline(y + rh*i);
+  cx = x; for (let i = 0; i < cols.length - 1; i++){ cx += cols[i]; vline(cx, y + rh, y + symEnd); }
+  c.font = `${fp}px ${FONT}`;
+  if (!rows.length && !pipes.length){ c.fillStyle = '#647083'; c.fillText('No HVAC symbols on this page yet', x + pad, y + rh*2.5); }
+  rows.forEach((r, i) => {
+    const ry = y + rh*(2 + i), [x0, y0, x1, y1] = r.def.b, ih = rh*0.74, k = Math.min(iw/(x1 - x0), ih/(y1 - y0));
+    c.save(); c.translate(x + pad + iw/2 - (x0 + x1)/2*k, ry + rh/2 - (y0 + y1)/2*k); c.scale(k, k);
+    c.strokeStyle = c.fillStyle = r.color; c.lineWidth = fp*0.08/k; c.lineJoin = 'round'; c.lineCap = 'round';
+    r.def.d(symKit(c, r.color)); c.restore();
+    c.fillStyle = '#1b2533'; c.textAlign = 'left';
+    let tx = x + cols[0], ci = 1; c.fillText(r.def.n, tx + pad, ry + rh/2); tx += cols[ci++];
+    if (withSize){ c.fillText(r.size, tx + pad, ry + rh/2); tx += cols[ci++]; }
+    c.textAlign = 'center'; c.fillText(String(r.n), tx + cols[ci]/2, ry + rh/2); tx += cols[ci++];
+    c.textAlign = 'left'; c.fillText(refTxt(r), tx + pad, ry + rh/2);
+  });
+  // Pipework section: one row per service and size, with measured length
+  if (pipes.length){
+    const py = y + symEnd;
+    c.fillStyle = '#e6ecf5'; c.fillRect(x, py, w, rh); hline(py); hline(py + rh);
+    c.font = `bold ${fp}px ${FONT}`; c.fillStyle = '#14284b'; c.textAlign = 'left';
+    c.fillText('PIPEWORK', x + pad, py + rh/2);
+    let hx = x + cols[0] + cols[1]; if (withSize){ c.fillText('Size', hx + pad, py + rh/2); hx += cols[2]; }
+    c.fillText('Length', hx + pad, py + rh/2);
+    c.font = `${fp}px ${FONT}`;
+    pipes.forEach((p, i) => {
+      const ry = py + rh*(1 + i);
+      if (i) hline(ry);
+      c.save(); c.strokeStyle = p.color; c.lineWidth = fp*0.22; c.lineCap = 'butt';
+      c.setLineDash(p.dash === 'dashed' ? [fp*0.6, fp*0.35] : p.dash === 'dotted' ? [fp*0.15, fp*0.3] : []);
+      c.beginPath(); c.moveTo(x + pad, ry + rh/2); c.lineTo(x + cols[0] - pad, ry + rh/2); c.stroke(); c.restore();
+      c.fillStyle = '#1b2533'; c.textAlign = 'left';
+      let tx = x + cols[0]; c.fillText(p.sv.n, tx + pad, ry + rh/2); tx += cols[1];
+      if (withSize){ c.fillText(p.size || '–', tx + pad, ry + rh/2); tx += cols[2]; }
+      c.fillText(lenTxt(p), tx + pad, ry + rh/2);
+    });
+    cx = x; [0, 1].concat(withSize ? [2] : []).forEach(i => { cx += cols[i]; vline(cx, py + rh, y + pipeEnd); });
+  }
+  if (noteLines.length){
+    hline(y + pipeEnd);
+    c.font = `${nf}px ${FONT}`; c.fillStyle = '#1b2533'; c.textAlign = 'left'; c.textBaseline = 'top';
+    noteLines.forEach((l, i) => c.fillText(l, x + pad, y + pipeEnd + pad*0.7 + i*nf*1.3));
+  }
+  c.lineWidth = fp*0.09; c.strokeRect(x, y, w, h);
+  c.restore();
+  a._b = [x, y, w, h];
+}
+function ensureSchedule(page){
+  if (settings.autoSchedule === false || page.schedOff || page.anns.some(a => a.type === 'schedule') || !page.anns.some(a => a.type === 'sym' || a.type === 'pipe')) return false;
+  const u = unitOf(page);
+  page.anns.push({id:uid(), type:'schedule', pts:[[PW(page) - u*15, u*15]], style:{fs:8}});
+  return true;
+}
+function makeSym(id, p, rot){
+  const def = SYM_BY_ID[id], s = unitOf(cur())*22*(S.symSize || 1), [x0,y0,x1,y1] = def.b;
+  return {id:uid(), type:'sym', sym:id, pts:[[p[0]+x0*s, p[1]+y0*s], [p[0]+x1*s, p[1]+y1*s]], rot:rot || 0, style:{...S.styles.sym}, tag:''};
+}
+function drawSymTag(c, a, page){
+  const u = unitOf(page), f = (a.style.fs || 9)*u*1.6, b = box(a.pts);
+  const cs = boxPts(b).map(q => toWorld(a, q)), xs = cs.map(q => q[0]), ys = cs.map(q => q[1]);
+  const x = (Math.min(...xs) + Math.max(...xs))/2, y = Math.max(...ys) + f*0.2;
+  c.save(); c.globalAlpha = 1; c.setLineDash([]); c.font = `bold ${f}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'top';
+  const txt = [a.tag, a.style.size].filter(Boolean).join(' · ');
+  c.lineJoin = 'round'; c.strokeStyle = '#fff'; c.lineWidth = f*0.28; c.strokeText(txt, x, y); c.fillStyle = a.style.color; c.fillText(txt, x, y);
+  c.restore();
+}
+
+/* ---------- Rotation ---------- */
+const ROT_TYPES = new Set(['rect','ellipse','cloud','hlbox','whiteout','image','stamp','text','patch','legend','sym']);
+const NO_ROTATE = new Set(['callout','schedule']);
+const normAng = r => { r = ((r + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI; return Math.abs(r) < 1e-9 ? 0 : r; };
+function rotAround(p, c, ang){ const s = Math.sin(ang), co = Math.cos(ang), dx = p[0]-c[0], dy = p[1]-c[1]; return [c[0]+dx*co-dy*s, c[1]+dx*s+dy*co]; }
+function rotCenter(a){ if (a.type === 'text' || a.type === 'legend') return a.pts[0]; if (a.type === 'sym') return symScaleOrigin(a).o; const [x,y,w,h] = box(a.pts); return [x+w/2, y+h/2]; }
+const isRot = a => !!a.rot && ROT_TYPES.has(a.type);
+const toLocal = (a, p) => isRot(a) ? rotAround(p, rotCenter(a), -a.rot) : p;
+const toWorld = (a, p) => isRot(a) ? rotAround(p, rotCenter(a), a.rot) : p;
+function applyRot(c, a){ if (isRot(a)){ const [cx,cy] = rotCenter(a); c.translate(cx, cy); c.rotate(a.rot); c.translate(-cx, -cy); } }
+
+/* ---------- Annotation renderer (shared by screen + export) ---------- */
+function drawAnn(c, a, page){
+  if (a.type === 'patch'){ c.save(); c.fillStyle = '#fff'; c.fillRect(...a.src); c.restore(); }
+  c.save(); applyRot(c, a); drawAnnBody(c, a, page); c.restore();
+  if (a.type === 'cloud' && a.pts[2] && (a.text || a._editing)) drawCloudNote(c, a, page);
+  if (a.type === 'sym' && (a.tag || a.style.size)) drawSymTag(c, a, page);
+}
+function drawCloudNote(c, a, page){
+  const u = unitOf(page), st = a.style, fp = (st.fs || 11)*u*1.6, N = a.pts[2];
+  c.save(); c.globalAlpha = 1;
+  c.font = `${fp}px ${FONT}`;
+  const lines = (a.text || ' ').split('\n'), pad = fp*0.3, lh = fp*1.25;
+  const w = Math.max(fp*0.6, ...lines.map(l => c.measureText(l).width)) + pad*2, h = lh*lines.length + pad*2;
+  const b = [N[0]-pad, N[1]-pad, w, h];
+  const [cx, cy] = rotCenter(a);
+  const near = [clamp(cx, b[0], b[0]+b[2]), clamp(cy, b[1], b[1]+b[3])];
+  const L = toLocal(a, near), bx = box(a.pts), dx = L[0]-cx, dy = L[1]-cy;
+  const s = st.shape === 'ellipse' ? 1/Math.hypot(dx/(bx[2]/2 || 1e-6), dy/(bx[3]/2 || 1e-6)) : Math.min(Math.abs((bx[2]/2)/(dx || 1e-9)), Math.abs((bx[3]/2)/(dy || 1e-9)));
+  if (s < 1){
+    const e = toWorld(a, [cx+dx*s, cy+dy*s]);
+    c.strokeStyle = c.fillStyle = st.color; c.lineWidth = Math.max(st.lw*u*0.7, u); c.lineCap = 'round';
+    pathPts(c, [e, near]); c.stroke();
+    c.beginPath(); c.arc(e[0], e[1], Math.max(st.lw*u*1.3, u*2.5), 0, Math.PI*2); c.fill();
+  }
+  a._nb = textBlock(c, a, N[0], N[1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.7, u*0.8)});
+  c.restore();
+}
+function drawAnnBody(c, a, page){
+  const u = unitOf(page), st = a.style, P = a.pts;
+  c.save();
+  c.globalAlpha = st.opacity ?? 1; c.lineJoin = 'round'; c.lineCap = 'round';
+  switch (a.type){
+    case 'line': case 'arrow': {
+      setStroke(c, st, u);
+      const hs = Math.max(st.lw*u*3.6, u*7);
+      let end = P[1];
+      if (a.type === 'arrow' && dist(P[0],P[1]) > hs){ const L = dist(P[0],P[1]); end = [P[1][0] - (P[1][0]-P[0][0])/L*hs*0.6, P[1][1] - (P[1][1]-P[0][1])/L*hs*0.6]; }
+      pathPts(c, [P[0], end]); c.stroke();
+      if (a.type === 'arrow') arrowHead(c, P[0], P[1], hs, st.color);
+      break; }
+    case 'pen': setStroke(c, st, u); pathPts(c, P); c.stroke(); break;
+    case 'marker': c.strokeStyle = st.color; c.lineWidth = st.lw*u*1.5; c.lineCap = 'butt'; c.lineJoin = 'round'; pathPts(c, P); c.stroke(); break;
+    case 'rect': case 'ellipse': case 'polygon': {
+      setStroke(c, st, u);
+      if (a.type === 'rect') { c.beginPath(); c.rect(...box(P)); }
+      else if (a.type === 'ellipse') { const [x,y,w,h] = box(P); c.beginPath(); c.ellipse(x+w/2, y+h/2, Math.max(w/2,0.01), Math.max(h/2,0.01), 0, 0, Math.PI*2); }
+      else pathPts(c, P, true);
+      const f = fillOf(st); if (f){ c.fillStyle = f; c.fill(); }
+      c.stroke(); break; }
+    case 'cloud': {
+      const [x,y,w,h] = box(P);
+      setStroke(c, st, u); c.setLineDash([]);
+      cloudShapePath(c, st.shape, x, y, w, h, Math.max(u*16, st.lw*u*6));
+      const f = fillOf(st); if (f){ c.fillStyle = f; c.fill(); }
+      c.stroke();
+      if (st.rev){
+        const el = st.shape === 'ellipse', fp = 11*u*1.6, s = fp*1.9, cx = el ? x+w*0.85 : x+w, cy = el ? y+h*0.15 : y;
+        c.beginPath(); c.moveTo(cx, cy - s*0.62); c.lineTo(cx + s*0.58, cy + s*0.38); c.lineTo(cx - s*0.58, cy + s*0.38); c.closePath();
+        c.fillStyle = '#fff'; c.fill(); c.lineWidth = Math.max(st.lw*u*0.8, u); c.stroke();
+        c.fillStyle = st.color; c.font = `bold ${fp}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(st.rev, cx, cy + s*0.08);
+      }
+      break; }
+    case 'hlbox': c.fillStyle = st.color; c.fillRect(...box(P)); break;
+    case 'whiteout': c.fillStyle = st.color; c.fillRect(...box(P)); break;
+    case 'text': {
+      const fp = st.fs*u*1.6;
+      a._b = textBlock(c, a, P[0][0], P[0][1], fp, {bg: st.tfill === 'white' || st.tfill === 'box', border: st.tfill === 'box', borderColor: st.color, borderW: fp*0.07});
+      break; }
+    case 'callout': {
+      const fp = st.fs*u*1.6;
+      c.globalAlpha = 1;
+      // measure box first to place leader
+      c.font = `${fp}px ${FONT}`;
+      const lines = (a.text || ' ').split('\n'), pad = fp*0.3, lh = fp*1.25;
+      const w = Math.max(fp*0.6, ...lines.map(l => c.measureText(l).width)) + pad*2, h = lh*lines.length + pad*2;
+      const b = [P[1][0]-pad, P[1][1]-pad, w, h];
+      const near = [clamp(P[0][0], b[0], b[0]+b[2]), clamp(P[0][1], b[1], b[1]+b[3])];
+      setStroke(c, st, u); c.setLineDash([]);
+      if (!inBox(P[0], b)){ const hs = Math.max(st.lw*u*3.6, u*7); pathPts(c, [near, P[0]]); c.stroke(); arrowHead(c, near, P[0], hs, st.color); }
+      a._b = textBlock(c, a, P[1][0], P[1][1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.8, u*0.8)});
+      break; }
+    case 'stamp': {
+      const [x,y,w,h] = box(P);
+      c.strokeStyle = c.fillStyle = st.color; c.setLineDash([]);
+      c.lineWidth = h*0.05; roundRect(c, x, y, w, h, h*0.12); c.stroke();
+      c.lineWidth = h*0.018; roundRect(c, x+h*0.08, y+h*0.08, w-h*0.16, h-h*0.16, h*0.07); c.stroke();
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = `bold 100px ${FONT}`; const tw = c.measureText(a.stamp).width/100;
+      const f1 = Math.min(h*0.4, (w*0.86)/tw); c.font = `bold ${f1}px ${FONT}`; c.fillText(a.stamp, x+w/2, y+h*0.43);
+      const sub = ['ADI CLIMATE SYSTEMS', a.by, ukDate(a.date)].filter(Boolean).join('  ·  ');
+      c.font = `600 100px ${FONT}`; const sw = c.measureText(sub).width/100;
+      const f2 = Math.min(h*0.14, (w*0.84)/sw); c.font = `600 ${f2}px ${FONT}`; c.fillText(sub, x+w/2, y+h*0.75);
+      a._b = [x,y,w,h];
+      break; }
+    case 'schedule': drawSchedule(c, a, page); break;
+    case 'sym': {
+      const def = SYM_BY_ID[a.sym]; if (!def) break;
+      const {k, o} = symScaleOrigin(a);
+      c.translate(o[0], o[1]); c.scale(k, k); c.setLineDash([]);
+      c.strokeStyle = c.fillStyle = st.color; c.lineWidth = Math.max((st.lw || 2)*u/k, 0.02); c.lineJoin = 'round'; c.lineCap = 'round';
+      def.d(symKit(c, st.color));
+      break; }
+    case 'image': {
+      const im = S.imgCache[a.asset]; const b = box(P);
+      if (im && im.complete) c.drawImage(im, ...b); else { c.strokeStyle = '#999'; c.strokeRect(...b); }
+      if (a.sigLabel){ const f = Math.max(b[3]*0.17, u*4); c.globalAlpha = 1; c.fillStyle = '#1b2533'; c.font = `${f}px ${FONT}`; c.textBaseline = 'top'; c.textAlign = 'left'; c.fillText(a.sigLabel, b[0], b[1] + b[3] + f*0.15); }
+      break; }
+    case 'patch': {
+      const im = S.imgCache[a.asset]; if (im && im.complete) c.drawImage(im, ...box(P));
+      break; }
+    case 'legend': {
+      const fp = st.fs*u*1.6, pad = fp*0.6, lh = fp*1.6, swl = fp*2.2;
+      const used = new Set(page.anns.filter(x => !['legend','whiteout','patch','image','schedule','pipe'].includes(x.type) && x.style && x.style.color).map(x => x.style.color.toLowerCase()));
+      let items = settings.legend.filter(l => used.has(l.c.toLowerCase()) && l.label);
+      if (!items.length) items = settings.legend.filter(l => l.c.toLowerCase() !== '#ffffff' && l.label);
+      c.font = `${fp}px ${FONT}`;
+      const tw = Math.max(c.measureText('COLOUR KEY').width*1.1, ...items.map(i => c.measureText(i.label).width + swl + fp*0.7));
+      const w = tw + pad*2, h = pad*2 + lh*(items.length + 1);
+      const [x,y] = P[0];
+      c.globalAlpha = 1; c.fillStyle = '#fff'; c.fillRect(x,y,w,h); c.strokeStyle = '#14284b'; c.lineWidth = fp*0.08; c.strokeRect(x,y,w,h);
+      c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = '#14284b'; c.font = `bold ${fp}px ${FONT}`;
+      c.fillText('COLOUR KEY', x+pad, y+pad+lh/2);
+      c.font = `${fp}px ${FONT}`;
+      items.forEach((it,i) => {
+        const yy = y + pad + lh*(i+1.5);
+        c.strokeStyle = it.c; c.lineWidth = fp*0.45; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(x+pad+fp*0.2, yy); c.lineTo(x+pad+swl-fp*0.2, yy); c.stroke();
+        if (it.c.toLowerCase() === '#ffffff'){ c.strokeStyle = '#999'; c.lineWidth = fp*0.05; c.strokeRect(x+pad, yy-fp*0.3, swl, fp*0.6); }
+        c.fillStyle = '#1b2533'; c.fillText(it.label, x+pad+swl+fp*0.6, yy);
+      });
+      a._b = [x,y,w,h];
+      break; }
+    case 'measure': case 'calibrate': {
+      setStroke(c, st, u); if (a.type === 'calibrate') c.setLineDash([u*6, u*4]);
+      const hs = Math.max(st.lw*u*3.2, u*6);
+      pathPts(c, P); c.stroke();
+      if (dist(P[0],P[1]) > hs*2){ arrowHead(c, P[1], P[0], hs, st.color); arrowHead(c, P[0], P[1], hs, st.color); }
+      const L = dist(P[0],P[1]);
+      const txt = a.type === 'calibrate' ? 'Known dimension' : fmtLen(L, page);
+      label(c, txt, (P[0][0]+P[1][0])/2, (P[0][1]+P[1][1])/2, st.fs*u*1.6, st.color);
+      break; }
+    case 'pipe': {
+      setStroke(c, st, u); pathPts(c, P); c.stroke();
+      const sv = SERVICE_BY_ID[st.svc], txt = [sv && sv.lbl, st.size].filter(Boolean).join(' ');
+      if (txt && P.length > 1){
+        const fp = (st.fs || 8)*u*1.6; c.font = `bold ${fp}px ${FONT}`; const tw = c.measureText(txt).width;
+        let best = -1, bl = 0;
+        for (let i = 1; i < P.length; i++){
+          const a0 = P[i-1], b0 = P[i], L = dist(a0, b0); if (L > bl){ bl = L; best = i; }
+          if (L < tw*2.2) continue;
+          const nLab = Math.max(1, Math.floor(L/(tw*12)));
+          for (let k = 1; k <= nLab; k++) pipeLabel(c, a0, b0, k/(nLab + 1), txt, fp, tw, st.color);
+        }
+        if (bl < tw*2.2 && best > 0) pipeLabel(c, P[best-1], P[best], 0.5, txt, fp, tw, st.color);
+      }
+      break; }
+    case 'run': {
+      setStroke(c, st, u); pathPts(c, P); c.stroke();
+      c.fillStyle = st.color; P.forEach(p => { c.beginPath(); c.arc(p[0], p[1], st.lw*u*1.4, 0, Math.PI*2); c.fill(); });
+      if (P.length > 1){ const l = P[P.length-1]; label(c, 'Σ ' + fmtLen(polyLen(P), page), l[0], l[1] - st.fs*u*2.4, st.fs*u*1.6, st.color); }
+      break; }
+    case 'area': {
+      setStroke(c, st, u); pathPts(c, P, a._live ? false : true);
+      const f = fillOf(st); if (f && P.length > 2){ c.save(); pathPts(c, P, true); c.fillStyle = f; c.fill(); c.restore(); }
+      c.stroke();
+      if (P.length > 2){ const [cx,cy] = centroid(P); label(c, [fmtArea(polyArea(P), page), 'P ' + fmtLen(polyLen(P, true), page)], cx, cy, st.fs*u*1.6, st.color); }
+      break; }
+  }
+  c.restore();
+}
+function pipeLabel(c, a0, b0, t, txt, fp, tw, col){
+  let ang = Math.atan2(b0[1]-a0[1], b0[0]-a0[0]); if (ang > Math.PI/2) ang -= Math.PI; if (ang < -Math.PI/2) ang += Math.PI;
+  c.save(); c.translate(a0[0] + (b0[0]-a0[0])*t, a0[1] + (b0[1]-a0[1])*t); c.rotate(ang); c.setLineDash([]); c.globalAlpha = 1;
+  c.fillStyle = '#fff'; c.fillRect(-tw/2 - fp*0.3, -fp*0.65, tw + fp*0.6, fp*1.3);
+  c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 0, fp*0.05); c.restore();
+}
+function roundRect(c, x, y, w, h, r){ r = Math.min(r, w/2, h/2); c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+
+function drawFooter(c, page){
+  const d = S.doc; if (!d.footer) return;
+  const u = unitOf(page), W = PW(page), H = PH(page), fp = u*11, pad = fp*0.55, m = u*8;
+  const parts = ['ADI Climate Systems', d.initials ? `Marked up by ${d.initials}` : null, ukDate(d.date), d.rev ? `Rev ${d.rev}` : null, d.name].filter(Boolean);
+  const txt = parts.join('   |   ');
+  c.save(); c.setLineDash([]); c.globalAlpha = 1;
+  c.font = `${fp}px ${FONT}`; c.textBaseline = 'middle';
+  const lw = logoImg ? fp*1.6*(logoImg.width/logoImg.height) + pad : 0;
+  const w = c.measureText(txt).width + pad*2 + lw + fp*0.4, h = fp + pad*2;
+  const x = W - m - w, y = H - m - h;
+  c.fillStyle = 'rgba(255,255,255,0.94)'; c.fillRect(x, y, w, h);
+  c.strokeStyle = '#14284b'; c.lineWidth = fp*0.06; c.strokeRect(x, y, w, h);
+  c.fillStyle = '#0096d6'; c.fillRect(x, y, fp*0.4, h);
+  if (logoImg) c.drawImage(logoImg, x + fp*0.4 + pad, y + (h - fp*1.6)/2, fp*1.6*(logoImg.width/logoImg.height), fp*1.6);
+  c.fillStyle = '#14284b'; c.fillText(txt, x + fp*0.4 + pad + lw, y + h/2);
+  c.restore();
+}
+
+function annBBox(a){
+  if (a.type === 'image' && a.sigLabel){ const b = box(a.pts); return [b[0], b[1], b[2], b[3]*1.25]; }
+  if (a.type === 'cloud') return box(a.pts);
+  if (a._b && ['text','callout','legend','stamp','schedule'].includes(a.type)){
+    if (a.type === 'callout'){ const b = a._b; const xs = [b[0], b[0]+b[2], a.pts[0][0]], ys = [b[1], b[1]+b[3], a.pts[0][1]]; return [Math.min(...xs), Math.min(...ys), Math.max(...xs)-Math.min(...xs), Math.max(...ys)-Math.min(...ys)]; }
+    return a._b;
+  }
+  const xs = a.pts.map(p=>p[0]), ys = a.pts.map(p=>p[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  return [x0, y0, Math.max(...xs)-x0, Math.max(...ys)-y0];
+}
+function ellipseHit(p, b, tol, filled){
+  const [x,y,w,h] = b, rx = w/2, ry = h/2; if (rx < 1e-6 || ry < 1e-6) return false;
+  const k = Math.hypot((p[0]-x-rx)/rx, (p[1]-y-ry)/ry); if (filled && k <= 1) return true;
+  return Math.abs(k-1)*Math.min(rx, ry) <= tol;
+}
+function hitAnn(a, p, tol){
+  const u = unitOf(cur()), lw = ((a.style && a.style.lw) || 2) * u / 2;
+  if (a.type === 'cloud' && a.pts[2] && a.text && a._nb && inBox(p, a._nb, tol)) return true;
+  p = toLocal(a, p);
+  switch (a.type){
+    case 'line': case 'arrow': case 'measure': return segDist(p, a.pts[0], a.pts[1]) <= tol + lw;
+    case 'pen': case 'run': case 'pipe': return polyDist(p, a.pts) <= tol + lw;
+    case 'marker': return polyDist(p, a.pts) <= tol + lw*1.5;
+    case 'polygon': case 'area': return (fillOf(a.style) && inPoly(p, a.pts)) || polyDist(p, a.pts, true) <= tol + lw;
+    case 'rect': { const b = box(a.pts); if (fillOf(a.style)) return inBox(p, b, tol); return polyDist(p, boxPts(b), true) <= tol + lw; }
+    case 'cloud': { const b = box(a.pts), f = !!fillOf(a.style); if (a.style.shape === 'ellipse') return ellipseHit(p, b, tol + lw + u*8, f); if (f && inBox(p, b, tol)) return true; return polyDist(p, boxPts(b), true) <= tol + lw + u*8; }
+    case 'ellipse': { const [x,y,w,h] = box(a.pts); const rx = w/2, ry = h/2; if (rx < 1e-6 || ry < 1e-6) return false; const k = Math.hypot((p[0]-x-rx)/rx, (p[1]-y-ry)/ry); if (fillOf(a.style) && k <= 1) return true; return Math.abs(k-1)*Math.min(rx,ry) <= tol + lw; }
+    case 'callout': return (a._b && inBox(p, a._b, tol)) || segDist(p, a.pts[0], a.pts[1]) <= tol*0.5 + lw || dist(p, a.pts[0]) <= tol*1.5;
+    default: return inBox(p, annBBox(a), tol);
+  }
+}
+const editablePts = a => ['pen','marker','text','legend','schedule'].includes(a.type) ? [] : a.pts;
+const handlePts = a => editablePts(a).map((q, i) => (a.type === 'cloud' && i === 2) ? q : toWorld(a, q));
+function rotHandle(a){
+  const b = annBBox(a), z = S.zoom, base = [b[0]+b[2]/2, b[1]-4/z], tip = [base[0], base[1]-24/z];
+  return {base: toWorld(a, base), p: toWorld(a, tip)};
+}
+
+/* ---------- Background rendering ---------- */
+let bgTimer = null, bgToken = 0;
+function maxScaleFor(page){ const W = PW(page), H = PH(page); let m = Math.min(7000/Math.max(W,H), Math.sqrt(28e6/(W*H))); if (S.doc.type === 'image') m = Math.min(m, 1); return m; }
+function wantedScale(page){ const need = S.zoom * (window.devicePixelRatio || 1); const q = Math.pow(2, Math.ceil(Math.log2(Math.max(need, 0.25)))); return Math.min(q, maxScaleFor(page)); }
+function needBg(page){ return !page.bg || page.bgRot !== page.rot || page.bgScale < wantedScale(page) * 0.99; }
+function requestBg(){
+  clearTimeout(bgTimer);
+  const page = cur(); if (!page) return;
+  bgTimer = setTimeout(async () => {
+    if (!needBg(page)) return;
+    const tok = ++bgToken, idx = S.cur, sc = wantedScale(page), rot = page.rot;
+    try {
+      const cv = await renderPageCanvas(idx, sc);
+      if (tok !== bgToken || page.rot !== rot) return;
+      page.bg = cv; page.bgScale = sc; page.bgRot = rot;
+      render();
+    } catch (e) { console.error(e); }
+  }, page.bg ? 180 : 0);
+}
+async function renderPageCanvas(idx, sc){
+  const page = S.doc.pages[idx];
+  const cv = document.createElement('canvas');
+  if (S.doc.type === 'pdf'){
+    const pp = await S.pdf.getPage(idx+1);
+    const vp = pp.getViewport({scale: sc, rotation: (pp.rotate + page.rot) % 360});
+    cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+    await pp.render({canvasContext: c, viewport: vp}).promise;
+  } else {
+    const im = S.imgs[idx], W = PW(page), H = PH(page);
+    cv.width = Math.round(W*sc); cv.height = Math.round(H*sc);
+    const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+    c.translate(cv.width/2, cv.height/2); c.rotate(page.rot*Math.PI/180);
+    c.drawImage(im, -page.w*sc/2, -page.h*sc/2, page.w*sc, page.h*sc);
+  }
+  return cv;
+}
+
+/* ---------- Screen render ---------- */
+let rafPending = false;
+function render(){ if (!rafPending){ rafPending = true; requestAnimationFrame(draw); } }
+function draw(){
+  rafPending = false;
+  const dpr = window.devicePixelRatio || 1, vw = view.clientWidth, vh = view.clientHeight;
+  if (canvas.width !== Math.round(vw*dpr) || canvas.height !== Math.round(vh*dpr)){ canvas.width = Math.round(vw*dpr); canvas.height = Math.round(vh*dpr); }
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const page = cur(); if (!page) return;
+  if (needBg(page)) requestBg();
+  const z = S.zoom, W = PW(page), H = PH(page);
+  ctx.setTransform(dpr*z, 0, 0, dpr*z, dpr*S.ox, dpr*S.oy);
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 14/z*dpr; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.restore();
+  if (page.bg && page.bgRot === page.rot){ ctx.imageSmoothingQuality = 'high'; ctx.drawImage(page.bg, 0, 0, W, H); }
+  for (const a of page.anns) drawAnn(ctx, a, page);
+  drawFooter(ctx, page);
+  if (S.drawing) drawAnn(ctx, S.drawing, page);
+  if (S.tool === 'symbols' && S.hover && !S.drag && SYM_BY_ID[S.sym]){ const g = makeSym(S.sym, S.hover, S.symRot); g.style.opacity = 0.5; drawAnn(ctx, g, page); }
+  // selection
+  const sel = getSel();
+  if (sel){
+    const b = annBBox(sel), pad = 4/z;
+    ctx.save(); ctx.strokeStyle = '#0096d6'; ctx.lineWidth = 1.5/z; ctx.setLineDash([5/z, 4/z]);
+    ctx.save(); applyRot(ctx, sel); ctx.strokeRect(b[0]-pad, b[1]-pad, b[2]+pad*2, b[3]+pad*2); ctx.restore();
+    if (sel.type === 'patch'){ ctx.strokeStyle = '#c62828'; ctx.strokeRect(...sel.src); ctx.strokeStyle = '#0096d6'; }
+    if (sel.type === 'cloud' && sel.pts[2] && sel.text && sel._nb){ const nb = sel._nb; ctx.strokeRect(nb[0]-pad, nb[1]-pad, nb[2]+pad*2, nb[3]+pad*2); }
+    ctx.setLineDash([]); const hs = 9/z;
+    if (!NO_ROTATE.has(sel.type)){
+      const rh = rotHandle(sel);
+      pathPts(ctx, [rh.base, rh.p]); ctx.stroke();
+      ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], 6/z, 0, Math.PI*2); ctx.fillStyle = '#0096d6'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5/z; ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], 3/z, -2.2, 1.6); ctx.stroke();
+      ctx.strokeStyle = '#0096d6';
+    }
+    for (const p of handlePts(sel)){ ctx.fillStyle = '#fff'; ctx.fillRect(p[0]-hs/2, p[1]-hs/2, hs, hs); ctx.strokeRect(p[0]-hs/2, p[1]-hs/2, hs, hs); }
+    ctx.restore();
+  }
+  if (S.snap){ const s = 10/z; ctx.save(); ctx.strokeStyle = '#00c853'; ctx.lineWidth = 2/z; ctx.strokeRect(S.snap[0]-s/2, S.snap[1]-s/2, s, s); ctx.restore(); }
+  $('#zoomPct').textContent = Math.round(z*100) + '%';
+}
+
+/* ---------- View transforms ---------- */
+function toPage(e){ const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left - S.ox)/S.zoom, (e.clientY - r.top - S.oy)/S.zoom]; }
+function toScreen(p){ return [p[0]*S.zoom + S.ox, p[1]*S.zoom + S.oy]; }
+function fitPage(){ const p = cur(); if (!p) return; const vw = view.clientWidth, vh = view.clientHeight, W = PW(p), H = PH(p); S.zoom = Math.min((vw-40)/W, (vh-40)/H); S.ox = (vw - W*S.zoom)/2; S.oy = (vh - H*S.zoom)/2; render(); }
+function fitWidth(){ const p = cur(); if (!p) return; const vw = view.clientWidth, W = PW(p); S.zoom = (vw-40)/W; S.ox = 20; S.oy = 20; render(); }
+function zoomAt(f, sx, sy){ const nz = clamp(S.zoom*f, 0.02, 60); S.ox = sx - (sx - S.ox)*(nz/S.zoom); S.oy = sy - (sy - S.oy)*(nz/S.zoom); S.zoom = nz; render(); }
+const zoomCenter = f => zoomAt(f, view.clientWidth/2, view.clientHeight/2);
+
+/* ---------- Undo / redo ---------- */
+const strip = (k, v) => k.startsWith('_') ? undefined : v;
+function snapshot(){ return JSON.stringify(S.doc.pages.map(p => ({rot:p.rot, mm:p.mm, scaleLabel:p.scaleLabel, schedOff:p.schedOff, anns:p.anns})), strip); }
+function checkpoint(){ S.undo.push(snapshot()); if (S.undo.length > 150) S.undo.shift(); S.redo = []; updateUndoBtns(); }
+function restore(json){
+  JSON.parse(json).forEach((d, i) => {
+    const p = S.doc.pages[i];
+    if (p.rot !== d.rot){ p.rot = d.rot; p.bg = null; renderThumb(i); }
+    p.mm = d.mm; p.scaleLabel = d.scaleLabel; p.schedOff = d.schedOff; p.anns = d.anns;
+  });
+  S.sel = null; markDirty(); updateAll();
+}
+function undo(){ if (!S.doc) return; commitEditor(); if (!S.undo.length) return; cancelDrawing(); S.redo.push(snapshot()); restore(S.undo.pop()); }
+function redo(){ if (!S.doc) return; commitEditor(); if (!S.redo.length) return; cancelDrawing(); S.undo.push(snapshot()); restore(S.redo.pop()); }
+function updateUndoBtns(){ $('#btnUndo').disabled = !S.undo.length; $('#btnRedo').disabled = !S.redo.length; }
+
+let listTimer = null;
+function markDirty(){
+  setDirty(true); scheduleAutosave(); render(); updateUndoBtns();
+  clearTimeout(listTimer); listTimer = setTimeout(() => { renderMarkupList(); updateThumbCounts(); }, 120);
+}
+
+/* ---------- Assets (images, moved areas) ---------- */
+function addAsset(dataURL){ const ex = Object.keys(S.doc.assets).find(k => S.doc.assets[k] === dataURL); if (ex) return ex; const id = 'as_' + uid(); S.doc.assets[id] = dataURL; cacheAsset(id); return id; }
+function cacheAsset(id){ return new Promise(res => { if (S.imgCache[id] && S.imgCache[id].complete) return res(S.imgCache[id]); const im = new Image(); im.onload = () => { render(); res(im); }; im.onerror = () => res(im); im.src = S.doc.assets[id]; S.imgCache[id] = im; }); }
+
+/* ---------- Open documents ---------- */
+async function openFile(file){
+  if (!file) return;
+  if (S.dirty && S.doc && !(await ask('Open a new file?', 'Markups on the current document that you have not saved will be lost.', 'Open new file', 'Cancel'))) return;
+  const name = file.name.replace(/\.[^.]+$/, ''), ext = (file.name.split('.').pop() || '').toLowerCase();
+  try {
+    if (ext === 'adimarkup' || ext === 'json'){ await loadProject(JSON.parse(await file.text())); S.fileHandle = null; return; }
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (ext === 'pdf' || file.type === 'application/pdf') await loadDoc({type:'pdf', mime:'application/pdf', bytes, name});
+    else if (isTiff(file)) await loadDoc({type:'image', mime:'image/tiff', bytes, name});
+    else if (/^image\//.test(file.type) || IMG_EXT[ext]) await loadDoc({type:'image', mime: file.type || IMG_EXT[ext], bytes, name});
+    else { toast('Unsupported file. Open a PDF, JPEG, PNG or .adimarkup file.'); return; }
+    S.fileHandle = null;
+  } catch (e) { console.error(e); toast('Could not open that file: ' + (e.message || e)); }
+}
+const IMG_EXT = {png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', bmp:'image/bmp'};
+const isTiff = f => f.type === 'image/tiff' || /\.tiff?$/i.test(f.name || '');
+const TIFF_LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js'];
+function loadScript(src){
+  return new Promise((res, rej) => {
+    if ([...document.scripts].some(x => x.src === src)) return res();
+    const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error('the TIFF reader could not be loaded – check your internet connection'));
+    document.head.appendChild(el);
+  });
+}
+/* TIFF: decode every page to a canvas (browsers can't show TIFF natively) */
+async function decodeTiff(bytes){
+  if (!window.UTIF){ for (const u of TIFF_LIBS) await loadScript(u); }
+  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const out = [];
+  for (const ifd of UTIF.decode(buf)){
+    try {
+      UTIF.decodeImage(buf, ifd);
+      if (!ifd.width || !ifd.height) continue;
+      const rgba = UTIF.toRGBA8(ifd), cv = document.createElement('canvas');
+      cv.width = ifd.width; cv.height = ifd.height;
+      cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, ifd.width*ifd.height*4), ifd.width, ifd.height), 0, 0);
+      out.push(cv);
+    } catch (e) { console.warn('TIFF page skipped', e); }
+  }
+  if (!out.length) throw new Error('this TIFF uses a format that could not be read');
+  return out;
+}
+async function loadDoc(src, saved){
+  showBusy('Opening…');
+  try {
+    const doc = {type:src.type, mime:src.mime, bytes:src.bytes, name:src.name, date:todayISO(), initials:settings.initials, rev:'', footer:settings.footer, units:settings.units, pages:[], assets:{}};
+    S.pdf = null; S.imgs = []; S.imgCache = {};
+    if (src.type === 'pdf'){
+      S.pdf = await pdfjsLib.getDocument({data: src.bytes.slice()}).promise;
+      for (let i = 1; i <= S.pdf.numPages; i++){ const pp = await S.pdf.getPage(i); const vp = pp.getViewport({scale:1}); doc.pages.push(newPage(vp.width, vp.height)); }
+    } else {
+      const url = URL.createObjectURL(new Blob([src.bytes], {type: src.mime}));
+      if (src.mime === 'image/tiff'){ showBusy('Reading TIFF…'); S.imgs = await decodeTiff(src.bytes); }
+      else S.imgs = [await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('Image could not be read')); im.src = url; })];
+      S.imgs.forEach(im => doc.pages.push(newPage(im.naturalWidth || im.width, im.naturalHeight || im.height)));
+    }
+    if (saved){
+      Object.assign(doc, {name:saved.name ?? doc.name, date:saved.date || doc.date, initials:saved.initials ?? doc.initials, rev:saved.rev ?? '', footer:saved.footer ?? doc.footer, units:saved.units || doc.units, assets:saved.assets || {}});
+      (saved.pages || []).forEach((sp, i) => { const p = doc.pages[i]; if (!p) return; p.rot = sp.rot || 0; p.mm = sp.mm || null; p.scaleLabel = sp.scaleLabel || ''; p.schedOff = !!sp.schedOff; p.anns = sp.anns || []; });
+    }
+    S.doc = doc; S.cur = 0; S.sel = null; S.undo = []; S.redo = []; S.dirty = !!saved && !!saved._autosave;
+    if (S.dirty) setDirty(true); else $('#saveState').hidden = true;
+    Object.keys(doc.assets).forEach(cacheAsset);
+    $('#welcome').hidden = true;
+    ['#docName','#btnSave','#btnExport'].forEach(s => $(s).disabled = false);
+    buildThumbs(); updateAll(); fitPage();
+  } finally { hideBusy(); }
+}
+const newPage = (w, h) => ({w, h, rot:0, mm:null, scaleLabel:'', anns:[], bg:null, bgScale:0, bgRot:0});
+
+/* ---------- Save / load project ---------- */
+function bytesToB64(bytes){ let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+function b64ToBytes(b){ const s = atob(b), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+function buildProject(binary){
+  const d = S.doc, used = new Set();
+  d.pages.forEach(p => p.anns.forEach(a => a.asset && used.add(a.asset)));
+  const assets = {}; used.forEach(id => { if (d.assets[id]) assets[id] = d.assets[id]; });
+  return {
+    app:'ADI Markup', format:1, savedAt:new Date().toISOString(),
+    name:d.name, date:d.date, initials:d.initials, rev:d.rev, footer:d.footer, units:d.units,
+    source:{type:d.type, mime:d.mime, data: binary ? d.bytes : bytesToB64(d.bytes)},
+    pages: JSON.parse(JSON.stringify(d.pages.map(p => ({rot:p.rot, mm:p.mm, scaleLabel:p.scaleLabel, schedOff:p.schedOff, anns:p.anns})), strip)),
+    assets,
+  };
+}
+async function loadProject(pj, fromAutosave){
+  if (!pj || !pj.source) throw new Error('Not an ADI Markup project file');
+  const data = pj.source.data instanceof Uint8Array ? pj.source.data : b64ToBytes(pj.source.data);
+  await loadDoc({type:pj.source.type, mime:pj.source.mime, bytes:data, name:pj.name}, Object.assign({}, pj, {_autosave: !!fromAutosave}));
+  toast(fromAutosave ? 'Previous session restored.' : `Opened “${pj.name}”.`);
+}
+const safeName = s => (String(s || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim() || 'document');
+const baseName = () => `${safeName(S.doc.name)}_${S.doc.date || todayISO()}`;
+
+const downloadsCap = (window.claude && window.claude.use) ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+async function saveBlob(blob, filename, desc, mime, ext, handleKey){
+  const dl = await downloadsCap;
+  if (dl){
+    hideBusy();
+    try { await dl.save({filename, data: blob}); return filename; }
+    catch (e) {
+      if (e && e.code === 'declined') return null;
+      if (e && e.code === 'rate_limited'){ toast('A save prompt is already open – finish that one first.'); return null; }
+      toast('Could not save the file here (' + ((e && e.code) || 'error') + ').', 6000, 'err'); return null;
+    }
+  }
+  if (window.showSaveFilePicker){
+    try {
+      let h = handleKey ? S[handleKey] : null;
+      if (!h){ h = await window.showSaveFilePicker({suggestedName: filename, types:[{description: desc, accept: {[mime]: [ext]}}]}); if (handleKey) S[handleKey] = h; }
+      const w = await h.createWritable(); await w.write(blob); await w.close();
+      return h.name;
+    } catch (e) {
+      if (e.name === 'AbortError') return null;
+      console.warn('Save picker unavailable, downloading instead', e);
+    }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  return filename;
+}
+async function saveProject(saveAs){
+  if (!S.doc) return;
+  commitEditor();
+  if (saveAs) S.fileHandle = null;
+  const blob = new Blob([JSON.stringify(buildProject(false))], {type:'application/json'});
+  const n = await saveBlob(blob, `${baseName()}.adimarkup.json`, 'ADI Markup project', 'application/json', '.json', 'fileHandle');
+  if (n){ setDirty(false); toast(`✓ Saved “${n}” to your Downloads folder. Reopen it with Open to keep editing.`, 7000, 'ok'); }
+}
+
+/* ---------- Autosave (IndexedDB, this browser only) ---------- */
+function idb(){ return new Promise((res, rej) => { const r = indexedDB.open('adi-markup', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbSet(k, v){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function idbGet(k){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('kv', 'readonly'); const r = tx.objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+let autosaveTimer = null;
+function scheduleAutosave(){ clearTimeout(autosaveTimer); autosaveTimer = setTimeout(async () => { try { if (S.doc) await idbSet('autosave', buildProject(true)); } catch (e) { console.warn('Autosave failed', e); } }, 1500); }
+
+/* ---------- Export ---------- */
+function overlayCanvas(page, k){
+  const W = PW(page), H = PH(page);
+  k = Math.min(k, Math.sqrt(32e6/(W*H)));
+  const cv = document.createElement('canvas'); cv.width = Math.round(W*k); cv.height = Math.round(H*k);
+  const c = cv.getContext('2d'); c.scale(cv.width/W, cv.height/H);
+  page.anns.forEach(a => drawAnn(c, a, page)); drawFooter(c, page);
+  return cv;
+}
+async function compositeCanvas(idx, k){
+  const page = S.doc.pages[idx], W = PW(page), H = PH(page);
+  k = Math.min(k, Math.sqrt(40e6/(W*H)));
+  const cv = await renderPageCanvas(idx, k);
+  const c = cv.getContext('2d'); c.setTransform(cv.width/W, 0, 0, cv.height/H, 0, 0);
+  page.anns.forEach(a => drawAnn(c, a, page)); drawFooter(c, page);
+  return cv;
+}
+const canvasBlob = (cv, type, q) => new Promise(res => cv.toBlob(res, type, q));
+async function exportAs(kind){
+  if (!S.doc) return;
+  commitEditor(); $('#exportMenu').hidden = true;
+  showBusy('Exporting…');
+  try {
+    if (kind === 'pdf') return await exportPDF();
+    if (kind === 'csv') return await exportCSV();
+    const multi = S.doc.pages.length > 1, fn = `${baseName()}${multi ? '_p' + (S.cur+1) : ''}`;
+    const k = S.doc.type === 'pdf' ? 300/72 : 1;
+    const cv = await compositeCanvas(S.cur, k);
+    if (kind === 'png'){ const n = await saveBlob(await canvasBlob(cv, 'image/png'), fn + '.png', 'PNG image', 'image/png', '.png'); if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok'); }
+    else { const n = await saveBlob(await canvasBlob(cv, 'image/jpeg', 0.92), fn + '.jpg', 'JPEG image', 'image/jpeg', '.jpg'); if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok'); }
+  } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e), 6000, 'err'); }
+  finally { hideBusy(); }
+}
+async function exportPDF(){
+  const {PDFDocument, degrees} = PDFLib, d = S.doc;
+  let out;
+  if (d.type === 'pdf'){
+    out = await PDFDocument.load(d.bytes, {ignoreEncryption:true});
+    const pages = out.getPages();
+    for (let i = 0; i < d.pages.length; i++){
+      const page = d.pages[i], pp = await S.pdf.getPage(i+1), total = (pp.rotate + page.rot) % 360;
+      if (page.rot) pages[i].setRotation(degrees(total));
+      if (!page.anns.length && !d.footer) continue;
+      const vp = pp.getViewport({scale:1, rotation: total});
+      const cv = overlayCanvas(page, 3);
+      const img = await out.embedPng(await (await canvasBlob(cv, 'image/png')).arrayBuffer());
+      const W = vp.width, H = vp.height;
+      const p0 = vp.convertToPdfPoint(0, H), p1 = vp.convertToPdfPoint(1, H);
+      const ang = Math.atan2(p1[1]-p0[1], p1[0]-p0[0]) * 180/Math.PI;
+      pages[i].drawImage(img, {x:p0[0], y:p0[1], width:W, height:H, rotate:degrees(ang)});
+    }
+  } else {
+    out = await PDFDocument.create();
+    const asJpg = d.mime === 'image/jpeg';
+    for (let i = 0; i < d.pages.length; i++){
+      const page = d.pages[i], W = PW(page), H = PH(page);
+      const cv = await compositeCanvas(i, 1);
+      const bytes = await (await canvasBlob(cv, asJpg ? 'image/jpeg' : 'image/png', 0.93)).arrayBuffer();
+      const img = asJpg ? await out.embedJpg(bytes) : await out.embedPng(bytes);
+      const pg = out.addPage([W*0.75, H*0.75]); pg.drawImage(img, {x:0, y:0, width:W*0.75, height:H*0.75});
+    }
+  }
+  out.setTitle(d.name || 'Document'); out.setAuthor(['ADI Climate Systems', d.initials].filter(Boolean).join(' – ')); out.setCreator('ADI Markup'); out.setModificationDate(new Date());
+  const bytes = await out.save();
+  const n = await saveBlob(new Blob([bytes], {type:'application/pdf'}), `${baseName()}.pdf`, 'PDF document', 'application/pdf', '.pdf');
+  if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
+}
+async function exportCSV(){
+  const d = S.doc, rows = [['Document','Date','Page','Markup','Colour','Colour meaning','Size','Length (mm)','Area (m²)','Perimeter (mm)','Text / detail']];
+  d.pages.forEach((p, i) => p.anns.forEach(a => {
+    if (a.type === 'schedule') return;
+    let len = '', area = '', per = '';
+    if (p.mm){
+      if (a.type === 'measure') len = Math.round(dist(a.pts[0], a.pts[1]) * p.mm);
+      if (a.type === 'run' || a.type === 'pipe') len = Math.round(polyLen(a.pts) * p.mm);
+      if (a.type === 'area'){ area = (polyArea(a.pts) * p.mm * p.mm / 1e6).toFixed(2); per = Math.round(polyLen(a.pts, true) * p.mm); }
+    }
+    const detail = a.type === 'stamp' ? a.stamp : a.type === 'sym' ? (a.tag || '') : (a.sigLabel || a.text || '');
+    rows.push([d.name, ukDate(d.date), i+1, typeName(a), (a.style && a.style.color) || '', (a.type === 'pipe' || a.type === 'sym') ? '' : legendLabel(a.style && a.style.color), (a.style && a.style.size) || '', len, area, per, detail]);
+  }));
+  const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }).join(',')).join('\r\n');
+  const n = await saveBlob(new Blob([csv], {type:'text/csv'}), `${baseName()}_schedule.csv`, 'CSV spreadsheet', 'text/csv', '.csv');
+  if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
+}
+
+/* ---------- Pointer interaction ---------- */
+const tolPx = () => 7 / S.zoom;
+function snapPt(p, exclude){
+  let best = null, bd = 11 / S.zoom;
+  for (const a of cur().anns){
+    if (a === exclude || ['pen','marker','text','legend','stamp','image','patch'].includes(a.type)) continue;
+    const pts = ['rect','cloud','hlbox','whiteout','ellipse'].includes(a.type) ? boxPts(box(a.pts)) : a.pts;
+    for (const q of pts){ const dd = dist(p, q); if (dd < bd){ bd = dd; best = q; } }
+  }
+  if (S.drawing && S.drawing.pts.length > 2 && CLICK_TOOLS.has(S.drawing.type)){
+    const f = S.drawing.pts[0]; if (dist(p, f) < bd) best = f;
+  }
+  S.snap = best ? best.slice() : null;
+  return best ? best.slice() : p;
+}
+const SNAP_TOOLS = new Set(['line','arrow','measure','run','area','polygon','calibrate','callout','pipe']);
+
+function setTool(t){
+  if (t === 'image'){ $('#fileImage').click(); return; }
+  commitEditor(); cancelDrawing();
+  S.tool = t;
+  if (t !== 'select') S.sel = null;
+  $$('.tool').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+  view.classList.toggle('pan', t === 'pan');
+  view.classList.toggle('draw', !['select','pan','text'].includes(t));
+  view.classList.toggle('text', t === 'text');
+  if (t === 'signature' && !curSig()) setTimeout(openSignatureModal, 0);
+  $('#symPanel').hidden = t !== 'symbols'; S.hover = null;
+  if (t === 'symbols') renderSymGrid();
+  if (['measure','run','area'].includes(t) && cur() && !cur().mm) toast('This page has no scale yet – click “No scale” at the bottom (or the ruler tool) to set one.', 5000);
+  updateProps(); updateHint(); render();
+}
+function cancelDrawing(){ S.drawing = null; S.snap = null; render(); }
+
+function onDown(e){
+  if (!S.doc) return;
+  e.preventDefault();
+  if (document.activeElement && document.activeElement !== document.body && !(editor && document.activeElement === editor.ta)) document.activeElement.blur();
+  S.pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (S.pointers.size === 2){ // pinch
+    cancelDrawing(); S.drag = null;
+    const [a, b] = [...S.pointers.values()];
+    S.pinch = {d: Math.hypot(b[0]-a[0], b[1]-a[1]), m: [(a[0]+b[0])/2, (a[1]+b[1])/2]};
+    return;
+  }
+  canvas.setPointerCapture(e.pointerId);
+  commitEditor();
+  const p = toPage(e);
+  if (e.button === 1 || e.button === 2 || S.tool === 'pan' || S.space){ startPan(e); return; }
+  if (e.button !== 0) return;
+  const page = cur(), t = S.tool;
+
+  if (t === 'select'){
+    const sel = getSel();
+    if (sel){
+      if (!NO_ROTATE.has(sel.type) && dist(p, rotHandle(sel).p) <= tolPx()*1.6){
+        const bb = annBBox(sel), center = ROT_TYPES.has(sel.type) ? rotCenter(sel) : [bb[0]+bb[2]/2, bb[1]+bb[3]/2];
+        S.drag = {mode:'rotate', a:sel, center, startAng: Math.atan2(p[1]-center[1], p[0]-center[0]), startRot: ROT_TYPES.has(sel.type) ? (sel.rot || 0) : 0, startPts: JSON.parse(JSON.stringify(sel.pts)), moved:false};
+        return;
+      }
+      const hp = handlePts(sel).findIndex(q => dist(p, q) <= tolPx()*1.4);
+      if (hp >= 0){ S.drag = {mode:'handle', a:sel, i:hp, start:p, moved:false}; return; }
+    }
+    const hit = [...page.anns].reverse().find(a => hitAnn(a, p, tolPx()));
+    if (hit){ S.sel = hit.id; S.drag = {mode:'move', a:hit, last:p, moved:false}; updateProps(); renderMarkupList(); render(); return; }
+    if (S.sel){ S.sel = null; updateProps(); renderMarkupList(); render(); }
+    startPan(e); return;
+  }
+  let q = SNAP_TOOLS.has(t) ? snapPt(p) : p;
+  const style = {...S.styles[toolType(t) || t] || {}};
+  if (t === 'cloud' && !style.rev) style.rev = S.doc.rev || '';
+  if (DRAG_TOOLS.has(t)){
+    const type = t === 'movearea' ? 'whiteout' : t;
+    S.drawing = {id:uid(), type, pts:[q, q.slice()], style: t === 'movearea' ? {color:'rgba(0,150,214,0.15)'} : (t === 'calibrate' ? {color:'#0096d6', lw:2, fs:10} : style), _tool:t};
+    if (t === 'callout') S.drawing.text = '';
+    render(); return;
+  }
+  if (FREE_TOOLS.has(t)){ S.drawing = {id:uid(), type:t, pts:[q], style, _tool:t}; return; }
+  if (CLICK_TOOLS.has(t)){
+    if (!S.drawing){ S.drawing = {id:uid(), type:t, pts:[q, q.slice()], style, _tool:t, _live:true}; }
+    else {
+      const d = S.drawing, fp = d.pts[0];
+      if (d.pts.length > 3 && dist(q, fp) < 1e-6 && t !== 'run'){ d.pts.pop(); finishClickShape(); return; }
+      d.pts[d.pts.length-1] = q; d.pts.push(q.slice());
+    }
+    render(); return;
+  }
+  if (t === 'text'){
+    checkpoint();
+    const a = {id:uid(), type:'text', pts:[p], style, text:''};
+    page.anns.push(a); S.sel = a.id; render(); editText(a, true); return;
+  }
+  if (t === 'stamp'){
+    checkpoint();
+    const W = PW(page), w = Math.max(W*0.17, unitOf(page)*150), h = w*0.32;
+    const a = {id:uid(), type:'stamp', pts:[[p[0]-w/2, p[1]-h/2],[p[0]+w/2, p[1]+h/2]], style, stamp: style.stamp || 'APPROVED', by:S.doc.initials, date:S.doc.date};
+    page.anns.push(a); S.sel = a.id; markDirty(); setTool('select'); S.sel = a.id; updateProps(); return;
+  }
+  if (t === 'symbols'){
+    if (!SYM_BY_ID[S.sym]){ toast('Pick a symbol in the panel first.'); return; }
+    checkpoint(); const a = makeSym(S.sym, p, S.symRot);
+    if (settings.autoTag !== false && SYM_PREFIX[a.sym]) a.tag = nextTag(SYM_PREFIX[a.sym]);
+    page.anns.push(a);
+    if (ensureSchedule(page)) toast('Added a valve & component schedule to the top-right of this page. It fills in as you add symbols – drag it anywhere.', 6000, 'ok');
+    markDirty(); return;
+  }
+  if (t === 'signature'){ const sig = curSig(); if (!sig) openSignatureModal(); else placeSignature(sig, p); return; }
+  if (t === 'legend'){
+    checkpoint();
+    const a = {id:uid(), type:'legend', pts:[p], style};
+    page.anns.push(a); markDirty(); setTool('select'); S.sel = a.id; updateProps(); render(); return;
+  }
+}
+function startPan(e){ S.drag = {mode:'pan', sx:e.clientX, sy:e.clientY, ox:S.ox, oy:S.oy}; view.classList.add('panning'); }
+
+function onMove(e){
+  if (!S.doc) return;
+  if (S.pointers.has(e.pointerId)) S.pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (S.tool === 'symbols' && e.pointerType !== 'touch'){ S.hover = toPage(e); render(); }
+  if (S.pinch && S.pointers.size === 2){
+    const [a, b] = [...S.pointers.values()], d = Math.hypot(b[0]-a[0], b[1]-a[1]), m = [(a[0]+b[0])/2, (a[1]+b[1])/2];
+    const r = canvas.getBoundingClientRect();
+    S.ox += m[0] - S.pinch.m[0]; S.oy += m[1] - S.pinch.m[1];
+    zoomAt(d / S.pinch.d, m[0] - r.left, m[1] - r.top);
+    S.pinch = {d, m}; return;
+  }
+  let p = toPage(e);
+  const dr = S.drag;
+  if (dr){
+    if (dr.mode === 'pan'){ S.ox = dr.ox + e.clientX - dr.sx; S.oy = dr.oy + e.clientY - dr.sy; render(); return; }
+    if (dr.mode === 'move'){
+      const dx = p[0] - dr.last[0], dy = p[1] - dr.last[1];
+      if (!dr.moved){ if (Math.hypot(dx, dy)*S.zoom < 2) return; checkpoint(); dr.moved = true; }
+      dr.a.pts.forEach(q => { q[0] += dx; q[1] += dy; });
+      dr.last = p; render(); return;
+    }
+    if (dr.mode === 'rotate'){
+      if (!dr.moved){ checkpoint(); dr.moved = true; }
+      let total = dr.startRot + Math.atan2(p[1]-dr.center[1], p[0]-dr.center[0]) - dr.startAng;
+      if (e.shiftKey) total = Math.round(total/(Math.PI/12))*(Math.PI/12);
+      else { const deg = total*180/Math.PI, r90 = Math.round(deg/90)*90; if (Math.abs(deg - r90) < 2.5) total = r90*Math.PI/180; }
+      const a = dr.a;
+      if (ROT_TYPES.has(a.type)) a.rot = normAng(total);
+      else a.pts = dr.startPts.map(q => rotAround(q, dr.center, total - dr.startRot));
+      render(); syncAngle(); return;
+    }
+    if (dr.mode === 'handle'){
+      if (!dr.moved){ checkpoint(); dr.moved = true; }
+      const a = dr.a;
+      if (isRot(a) && a.pts.length >= 2 && dr.i < 2){
+        const j = dr.i === 0 ? 1 : 0, Wj = dr.Wj || (dr.Wj = toWorld(a, a.pts[j]));
+        if ((a.type === 'image' || a.type === 'stamp' || a.type === 'sym') && !e.altKey){
+          const ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
+          const D = rotAround([p[0]-Wj[0], p[1]-Wj[1]], [0,0], -a.rot);
+          if (Math.abs(D[0])/ar > Math.abs(D[1])) D[1] = Math.sign(D[1] || 1)*Math.abs(D[0])/ar; else D[0] = Math.sign(D[0] || 1)*Math.abs(D[1])*ar;
+          const W2 = rotAround(D, [0,0], a.rot); p = [Wj[0]+W2[0], Wj[1]+W2[1]];
+        }
+        const c2 = [(Wj[0]+p[0])/2, (Wj[1]+p[1])/2], hv = rotAround([p[0]-c2[0], p[1]-c2[1]], [0,0], -a.rot);
+        a.pts[dr.i] = [c2[0]+hv[0], c2[1]+hv[1]]; a.pts[j] = [c2[0]-hv[0], c2[1]-hv[1]];
+        if (a.type === 'sym'){ // its pivot is the pipe point, not the box centre: shift so the fixed corner stays put
+          const P = rotCenter(a), d = [P[0]-c2[0], P[1]-c2[1]], rd = rotAround(d, [0,0], a.rot), t = [rd[0]-d[0], rd[1]-d[1]];
+          a.pts[0] = [a.pts[0][0]+t[0], a.pts[0][1]+t[1]]; a.pts[1] = [a.pts[1][0]+t[0], a.pts[1][1]+t[1]];
+        }
+        render(); return;
+      }
+      p = snapPt(p, a);
+      if (e.shiftKey && a.pts.length === 2 && ['line','arrow','measure','callout'].includes(a.type)) p = constrainAngle(a.pts[1-dr.i], p);
+      if ((a.type === 'image' || a.type === 'stamp' || a.type === 'sym') && a.pts.length === 2 && !e.altKey){
+        const q = a.pts[1-dr.i], ar = dr.ar || (dr.ar = (b => b[2]/(b[3] || 1))(box(a.pts)));
+        let dx = p[0]-q[0], dy = p[1]-q[1];
+        if (Math.abs(dx)/ar > Math.abs(dy)) dy = Math.sign(dy || 1)*Math.abs(dx)/ar; else dx = Math.sign(dx || 1)*Math.abs(dy)*ar;
+        p = [q[0]+dx, q[1]+dy];
+      }
+      a.pts[dr.i] = p; render(); return;
+    }
+  }
+  const d = S.drawing;
+  if (!d){ S.snap = null; if (SNAP_TOOLS.has(S.tool) && e.pointerType === 'mouse'){ snapPt(p); render(); } return; }
+  if (FREE_TOOLS.has(d.type)){
+    if (e.buttons & 1){ const l = d.pts[d.pts.length-1]; if (dist(l, p)*S.zoom > 1.5){ d.pts.push(p); render(); } }
+    return;
+  }
+  if (SNAP_TOOLS.has(S.tool)) p = snapPt(p);
+  const anchor = d.pts[d.pts.length-2];
+  if (e.shiftKey){
+    if (['rect','ellipse','cloud','hlbox','whiteout'].includes(d.type) || d._tool === 'movearea') p = constrainSquare(anchor, p);
+    else p = constrainAngle(anchor, p);
+  }
+  d.pts[d.pts.length-1] = p; render();
+}
+
+function onUp(e){
+  S.pointers.delete(e.pointerId);
+  if (S.pinch){ if (S.pointers.size < 2) S.pinch = null; return; }
+  if (!S.doc) return;
+  const dr = S.drag; S.drag = null; view.classList.remove('panning');
+  if (dr){ if (['move','handle','rotate'].includes(dr.mode) && dr.moved){ S.snap = null; markDirty(); updateProps(); } return; }
+  const d = S.drawing; if (!d) return;
+  const page = cur();
+  if (FREE_TOOLS.has(d.type)){
+    S.drawing = null;
+    if (d.pts.length > 1){ checkpoint(); delete d._tool; page.anns.push(d); S.sel = null; markDirty(); }
+    render(); return;
+  }
+  if (CLICK_TOOLS.has(d.type)) return;
+  S.drawing = null; S.snap = null;
+  const tiny = dist(d.pts[0], d.pts[1]) * S.zoom < 4;
+  const t = d._tool; delete d._tool;
+  if (t === 'callout'){
+    if (tiny){ const u = unitOf(page); d.pts[1] = [d.pts[0][0] + u*60, d.pts[0][1] - u*50]; }
+    checkpoint(); page.anns.push(d); S.sel = d.id; render(); editText(d, true); return;
+  }
+  if (tiny){ render(); return; }
+  if (t === 'cloud'){
+    const [x, y, w] = box(d.pts), u = unitOf(page);
+    d.pts.push([clamp(x + w + u*25, u*5, PW(page) - u*160), Math.max(u*5, y - u*40)]); d.text = '';
+    checkpoint(); page.anns.push(d); S.sel = d.id; render(); editText(d, true); return;
+  }
+  if (t === 'calibrate'){ openScaleModal(dist(d.pts[0], d.pts[1])); render(); return; }
+  if (t === 'movearea'){ createPatch(box(d.pts)); return; }
+  checkpoint(); page.anns.push(d); markDirty(); render();
+}
+function finishClickShape(){
+  const d = S.drawing; if (!d) return;
+  // remove the rubber-band point and duplicate clicks (from double-click)
+  d.pts.pop();
+  d.pts = d.pts.filter((p, i, arr) => i === 0 || dist(p, arr[i-1]) * S.zoom > 3);
+  S.drawing = null; S.snap = null;
+  const need = (d.type === 'run' || d.type === 'pipe') ? 2 : 3;
+  if (d.pts.length < need){ render(); return; }
+  delete d._tool; delete d._live;
+  checkpoint(); cur().anns.push(d);
+  if (d.type === 'pipe' && ensureSchedule(cur())) toast('Added a schedule to the top-right of this page. It lists pipework by service and size – drag it anywhere.', 6000, 'ok');
+  markDirty(); render();
+}
+function onDbl(e){
+  if (!S.doc) return;
+  if (S.drawing && CLICK_TOOLS.has(S.drawing.type)){ finishClickShape(); return; }
+  if (S.tool === 'select'){
+    const p = toPage(e), a = [...cur().anns].reverse().find(x => ['text','callout','cloud'].includes(x.type) && hitAnn(x, p, tolPx()));
+    if (a){
+      if (a.type === 'cloud' && !a.pts[2]){ const [x, y, w] = box(a.pts), u = unitOf(cur()), tr = toWorld(a, [x+w, y]); a.pts[2] = [tr[0] + u*25, tr[1] - u*40]; }
+      S.sel = a.id; editText(a, false);
+    }
+  }
+}
+function onWheel(e){
+  if (!S.doc) return;
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  if (e.ctrlKey || e.metaKey || e.deltaX === 0 && !e.shiftKey){
+    const dy = e.deltaMode === 1 ? e.deltaY*33 : e.deltaY;
+    zoomAt(Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
+  } else { S.ox -= e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX; S.oy -= e.shiftKey ? 0 : e.deltaY; render(); }
+}
+
+/* ---------- Move part of drawing ---------- */
+async function createPatch(b){
+  const page = cur(), W = PW(page), H = PH(page);
+  let [x, y, w, h] = b; const x1 = clamp(x+w, 0, W), y1 = clamp(y+h, 0, H); x = clamp(x, 0, W); y = clamp(y, 0, H); w = x1 - x; h = y1 - y;
+  if (w < 1 || h < 1) return;
+  if (!page.bg){ toast('Page still loading – try again in a moment.'); return; }
+  const k = page.bgScale, cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(w*k)); cv.height = Math.max(1, Math.round(h*k));
+  cv.getContext('2d').drawImage(page.bg, x*k, y*k, w*k, h*k, 0, 0, cv.width, cv.height);
+  const id = addAsset(cv.toDataURL('image/png'));
+  await cacheAsset(id);
+  checkpoint();
+  const a = {id:uid(), type:'patch', pts:[[x, y],[x+w, y+h]], src:[x, y, w, h], asset:id, style:{}};
+  page.anns.push(a); setTool('select'); S.sel = a.id; markDirty(); updateProps();
+  toast('Now drag the selected area to its new position. The original spot is whited out.', 4500);
+}
+
+/* ---------- Text editing ---------- */
+let editor = null;
+function editText(a, isNew){
+  commitEditor();
+  const page = cur(), u = unitOf(page), fp = a.style.fs*u*1.6;
+  const anchor = a.type === 'callout' ? a.pts[1] : a.type === 'cloud' ? a.pts[2] : a.pts[0];
+  const ta = document.createElement('textarea');
+  ta.className = 'text-editor'; ta.value = a.text || ''; ta.spellcheck = true;
+  if (a.type === 'cloud') ta.placeholder = 'Type a note… (Esc to skip)';
+  const old = a.text || '';
+  a._editing = true;
+  const place = () => {
+    const [sx, sy] = toScreen(anchor), fz = fp*S.zoom;
+    Object.assign(ta.style, {left: sx + 'px', top: sy + 'px', fontSize: fz + 'px', color: a.style.color});
+    ta.style.height = 'auto'; ta.style.width = 'auto';
+    ctx.font = `${fz}px ${FONT}`;
+    const lines = ta.value.split('\n');
+    ta.style.width = Math.max(a.type === 'cloud' && !ta.value ? 230 : 60, ...lines.map(l => ctx.measureText(l + 'MM').width)) + 'px';
+    ta.style.height = (lines.length * fz * 1.25 + 6) + 'px';
+  };
+  ta.addEventListener('input', place);
+  ta.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Escape' || (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey))){ ev.preventDefault(); commitEditor(); } });
+  ta.addEventListener('blur', () => setTimeout(() => { if (editor && editor.ta === ta) commitEditor(); }, 0));
+  view.appendChild(ta); place(); render();
+  editor = {ta, a, isNew, old, place};
+  ta.focus(); ta.select();
+  setTimeout(() => { if (editor && editor.ta === ta && document.activeElement !== ta) ta.focus(); }, 0);
+}
+function commitEditor(){
+  if (!editor) return;
+  const {ta, a, isNew, old} = editor; editor = null;
+  const text = ta.value.replace(/\s+$/, '');
+  ta.remove(); delete a._editing;
+  const page = S.doc.pages.find(p => p.anns.includes(a));
+  if (!text && a.type === 'cloud'){
+    if (!isNew && old) checkpointBefore(old, a);
+    a.pts = a.pts.slice(0, 2); delete a.text;
+  } else if (!text){
+    if (page) page.anns = page.anns.filter(x => x !== a);
+    if (isNew) { S.undo.pop(); updateUndoBtns(); } else checkpointBefore(old, a);
+    S.sel = null;
+  } else if (text !== old){
+    if (!isNew) checkpointBefore(old, a);
+    a.text = text;
+  }
+  markDirty(); updateProps(); render();
+}
+function checkpointBefore(oldText, a){ const t = a.text; a.text = oldText; checkpoint(); a.text = t; }
+
+/* ---------- Property bar ---------- */
+function buildSwatches(){
+  $('#swatches').innerHTML = settings.legend.map(l => `<button class="sw" data-c="${esc(l.c)}" title="${esc(l.label || l.c)}" style="background:${esc(l.c)}"></button>`).join('');
+}
+function currentStyleTarget(){
+  const sel = getSel();
+  if (sel) return {type: sel.type, style: sel.style, ann: sel};
+  const type = toolType(S.tool);
+  return type ? {type, style: S.styles[type]} : null;
+}
+function updateProps(){
+  const t = currentStyleTarget(), sel = getSel();
+  $('#propTitle').textContent = sel ? typeName(sel) : (TYPE_NAME[S.tool] || '');
+  const show = new Set(t ? PROPS[t.type] || [] : []);
+  if (sel) show.add('selActions');
+  if (show.has('sig')) renderSigList();
+  if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
+  if (sel && sel.type === 'schedule' && document.activeElement !== $('#pNote')) $('#pNote').value = sel.note ?? DEFAULT_SCHED_NOTE;
+  if (sel && sel.type === 'sym'){ show.add('tag'); if (document.activeElement !== $('#pTag')) $('#pTag').value = sel.tag || ''; }
+  $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
+  syncAngle();
+  $$('#props .prop').forEach(el => el.hidden = !show.has(el.dataset.p));
+  $('#propHint').textContent = !t ? (S.tool === 'select' ? 'Select a markup to change its colour, size or text.' : S.tool === 'calibrate' ? 'Drag along a known dimension.' : '') : (sel && sel.type === 'patch' ? 'Drag to reposition the moved area. Delete to put it back.' : '');
+  if (!t) return;
+  const st = t.style;
+  $$('.sw').forEach(b => b.classList.toggle('on', st.color && b.dataset.c.toLowerCase() === String(st.color).toLowerCase()));
+  if (st.color && /^#/.test(st.color)) $('#pColor').value = st.color.length === 4 ? '#' + st.color.slice(1).split('').map(x=>x+x).join('') : st.color;
+  if (st.lw != null) $('#pLw').value = st.lw;
+  if (st.dash) $('#pDash').value = st.dash;
+  $('#pFill').value = st.fill === 'white' ? 'solid' : (st.fill || 'none');
+  { const fc = st.fill === 'white' ? '#ffffff' : (st.fillColor || st.color || '#ffeb3b'); if (/^#/.test(fc)) $('#pFillColor').value = fc.length === 4 ? '#' + fc.slice(1).split('').map(x=>x+x).join('') : fc; }
+  if (st.shape) $('#pShape').value = st.shape;
+  if (st.svc) $('#pSvc').value = st.svc;
+  if (document.activeElement !== $('#pSize')) $('#pSize').value = st.size || '';
+  if (st.tfill) $('#pTFill').value = st.tfill;
+  if (st.fs != null) $('#pFs').value = st.fs;
+  $('#pOpacity').value = Math.round((st.opacity ?? 1)*100);
+  if (t.type === 'stamp') $('#pStamp').value = sel ? sel.stamp : (st.stamp || 'APPROVED');
+  $('#pRev').value = st.rev || '';
+}
+let propCheckpointed = false;
+function applyProp(key, val, final){
+  const t = currentStyleTarget(); if (!t) return;
+  const sel = getSel();
+  if (sel && !propCheckpointed){ checkpoint(); propCheckpointed = true; }
+  if (final) propCheckpointed = false;
+  const styleNow = sel ? sel.style : t.style;
+  if (key === 'tag'){ if (sel) sel.tag = val; markDirty(); return; }
+  if (key === 'note'){ if (sel) sel.note = val; markDirty(); return; }
+  if (key === 'svc'){
+    const sv = SERVICE_BY_ID[val] || SERVICES[0];
+    [styleNow, S.styles.pipe].forEach(o => { o.svc = sv.id; o.color = sv.c; o.dash = sv.dash; });
+    if (sel) markDirty(); else render(); updateProps(); return;
+  }
+  if (key === 'stamp'){
+    if (sel){ sel.stamp = val; sel.style.color = STAMPS[val] || sel.style.color; }
+    S.styles.stamp.stamp = val; S.styles.stamp.color = STAMPS[val] || S.styles.stamp.color;
+  } else {
+    styleNow[key] = val;
+    if (S.styles[t.type]) S.styles[t.type][key] = val;
+    if (key === 'fill' && val === 'solid' && styleNow.fillColor == null){ styleNow.fillColor = styleNow.color; }
+    if (key === 'fillColor' && (!styleNow.fill || styleNow.fill === 'none' || styleNow.fill === 'white')){ styleNow.fill = 'tint'; if (S.styles[t.type]) S.styles[t.type].fill = 'tint'; }
+  }
+  if (sel) markDirty(); else render();
+  if (t.type === 'sym' && key === 'color' && !$('#symPanel').hidden) renderSymGrid();
+  updateProps();
+}
+function syncAngle(){ const a = getSel(), el = $('#pAngle'); if (a && ROT_TYPES.has(a.type) && document.activeElement !== el) el.value = Math.round((a.rot || 0)*180/Math.PI); }
+function rotateSelBy(deg){
+  const a = getSel(); if (!a || NO_ROTATE.has(a.type)) return;
+  checkpoint(); const r = deg*Math.PI/180;
+  if (ROT_TYPES.has(a.type)) a.rot = normAng((a.rot || 0) + r);
+  else { const b = annBBox(a), c = [b[0]+b[2]/2, b[1]+b[3]/2]; a.pts = a.pts.map(q => rotAround(q, c, r)); }
+  markDirty(); updateProps();
+}
+function setSelAngle(deg){ const a = getSel(); if (!a || !ROT_TYPES.has(a.type) || isNaN(deg)) return; checkpoint(); a.rot = normAng(deg*Math.PI/180); markDirty(); }
+function bindProp(id, key, conv){
+  const el = $(id);
+  el.addEventListener('input', () => applyProp(key, conv(el.value), false));
+  el.addEventListener('change', () => applyProp(key, conv(el.value), true));
+}
+
+/* ---------- Scale ---------- */
+function scaleText(p){ if (!p.mm) return 'No scale'; return p.scaleLabel || `Scaled (1 unit = ${p.mm.toFixed(3)} mm)`; }
+function openScaleModal(calLen){
+  const page = cur(); if (!page) return;
+  const isPdf = S.doc.type === 'pdf';
+  const body = `
+    ${calLen ? `<div class="opt"><h3>Real length of the line you drew</h3>
+      <div class="row"><input type="number" id="calVal" min="0" step="any" placeholder="e.g. 5000" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:7px 8px"><select id="calUnit" style="border:1px solid var(--border);border-radius:6px;padding:7px"><option value="1">mm</option><option value="1000">m</option></select></div></div>` :
+    `<div class="opt"><h3>Calibrate from a known dimension</h3><p class="muted" style="margin:0 0 8px">Most reliable – works on scans, photos and drawings not to scale on paper.</p><button class="btn" id="calStart">Draw along a known dimension…</button></div>
+     ${isPdf ? `<div class="opt"><h3>Drawing scale (printed on the drawing)</h3>
+      <div class="row">1 : <input type="number" id="ratio" min="1" step="any" value="${page.ratio || 100}" style="width:110px;border:1px solid var(--border);border-radius:6px;padding:7px 8px">
+      <select id="ratioPick" style="border:1px solid var(--border);border-radius:6px;padding:7px"><option value="">Common…</option>${[1,2,5,10,20,25,50,100,200,250,500,1000,1250,2500].map(n=>`<option>${n}</option>`).join('')}</select></div>
+      <p class="muted" style="margin:0">Only correct if the PDF is at its true paper size (e.g. A1 at 1:100).</p></div>` : ''}`}
+    <label class="check"><input type="checkbox" id="calAll" ${S.doc.pages.length > 1 ? '' : 'disabled'}> Apply to all pages</label>
+    <div class="muted">Current: ${esc(scaleText(page))}</div>`;
+  modal('Set scale – page ' + (S.cur+1), body, [
+    page.mm ? {label:'Clear scale', cls:'danger', fn: () => { setScale(null, ''); return true; }} : null,
+    {label:'Cancel', fn: () => true},
+    {label:'Apply', cls:'primary', fn: () => {
+      if (calLen){
+        const v = parseFloat($('#calVal').value) * parseFloat($('#calUnit').value);
+        if (!(v > 0)){ toast('Enter the real length.'); return false; }
+        setScale(v / calLen, `Calibrated: ${Math.round(v).toLocaleString('en-GB')} mm`);
+        return true;
+      }
+      if (!isPdf){ return true; }
+      const r = parseFloat($('#ratio').value);
+      if (!(r > 0)){ toast('Enter a scale.'); return false; }
+      setScale(25.4/72 * r, `1:${r}`, r); return true;
+    }},
+  ].filter(Boolean), () => {
+    const cs = $('#calStart'); if (cs) cs.onclick = () => { closeModal(); setTool('calibrate'); };
+    const rp = $('#ratioPick'); if (rp) rp.onchange = () => { if (rp.value) $('#ratio').value = rp.value; };
+    const cv = $('#calVal'); if (cv) setTimeout(() => cv.focus(), 30);
+  });
+}
+function setScale(mm, lbl, ratio){
+  checkpoint();
+  const all = $('#calAll') && $('#calAll').checked;
+  (all ? S.doc.pages : [cur()]).forEach(p => { p.mm = mm; p.scaleLabel = lbl; p.ratio = ratio; });
+  if (S.tool === 'calibrate') setTool('measure');
+  markDirty(); updateAll();
+  if (mm) toast('Scale set – ' + lbl);
+}
+
+/* ---------- Pages ---------- */
+function buildThumbs(){
+  const el = $('#thumbs'); el.innerHTML = '';
+  S.doc.pages.forEach((p, i) => {
+    const b = document.createElement('button'); b.className = 'thumb'; b.dataset.i = i;
+    b.innerHTML = `<canvas></canvas><span>Page ${i+1}<b class="cnt"></b></span>`;
+    b.onclick = () => gotoPage(i);
+    el.appendChild(b);
+  });
+  (async () => { for (let i = 0; i < S.doc.pages.length; i++) await renderThumb(i); })();
+  updateThumbCounts();
+}
+async function renderThumb(i){
+  const doc = S.doc, p = doc.pages[i], btn = $(`.thumb[data-i="${i}"]`); if (!btn) return;
+  try {
+    const sc = 180 / Math.max(PW(p), PH(p));
+    const cv = await renderPageCanvas(i, sc);
+    if (S.doc !== doc) return;
+    const old = btn.querySelector('canvas'); cv.style.width = Math.round(cv.width) + 'px'; old.replaceWith(cv);
+  } catch (e) { console.warn(e); }
+}
+function updateThumbCounts(){ if (!S.doc) return; S.doc.pages.forEach((p, i) => { const el = $(`.thumb[data-i="${i}"] .cnt`); if (el) el.textContent = p.anns.length ? ` · ${p.anns.length} markup${p.anns.length > 1 ? 's' : ''}` : ''; }); }
+function gotoPage(i){
+  if (!S.doc || i < 0 || i >= S.doc.pages.length) return;
+  commitEditor(); cancelDrawing();
+  S.doc.pages.forEach((p, j) => { if (j !== i) { p.bg = null; } });
+  S.cur = i; S.sel = null; fitPage(); updateAll();
+}
+async function rotatePage(){
+  const page = cur(); if (!page) return;
+  commitEditor(); cancelDrawing(); checkpoint();
+  const H = PH(page);
+  const rotPt = q => [H - q[1], q[0]];
+  for (const a of page.anns){
+    if (ROT_TYPES.has(a.type)){
+      if (a.type === 'text' || a.type === 'legend') a.pts = [rotPt(a.pts[0])];
+      else {
+        const P = rotCenter(a), nP = rotPt(P), t = [nP[0]-P[0], nP[1]-P[1]];
+        a.pts = [[a.pts[0][0]+t[0], a.pts[0][1]+t[1]], [a.pts[1][0]+t[0], a.pts[1][1]+t[1]], ...a.pts.slice(2).map(rotPt)];
+      }
+      a.rot = normAng((a.rot || 0) + Math.PI/2);
+      if (a.type === 'patch'){ const [x, y, w, h] = a.src; a.src = [H - (y + h), x, h, w]; }
+    } else a.pts = a.pts.map(rotPt);
+  }
+  page.rot = (page.rot + 90) % 360; page.bg = null;
+  renderThumb(S.cur); fitPage(); markDirty(); updateAll();
+}
+
+/* ---------- Sidebar: markups ---------- */
+function renderMarkupList(){
+  const el = $('#mkList'), tot = $('#mkTotals');
+  const page = cur(); if (!page){ el.innerHTML = ''; tot.innerHTML = ''; return; }
+  if (!page.anns.length){ el.innerHTML = '<li class="muted">No markups on this page yet.</li>'; tot.innerHTML = ''; return; }
+  el.innerHTML = page.anns.map((a, i) => ({a, i})).reverse().map(({a}) => `
+    <li class="mk ${a.id === S.sel ? 'on' : ''}" data-id="${a.id}">
+      <span class="dot" style="background:${esc((a.style && a.style.color && a.type !== 'patch') ? a.style.color : '#fff')}"></span>
+      <span class="t"><b>${esc(typeName(a))}</b><small>${esc(annValue(a, page) || legendLabel(a.style && a.style.color) || '')}</small></span>
+      <button class="del" title="Delete" data-del="${a.id}">×</button>
+    </li>`).join('');
+  // totals
+  const m = page.anns.filter(a => a.type === 'measure'), r = page.anns.filter(a => a.type === 'run'), ar = page.anns.filter(a => a.type === 'area');
+  if (page.mm && (m.length || r.length || ar.length)){
+    const L = m.reduce((s, a) => s + dist(a.pts[0], a.pts[1]), 0) + r.reduce((s, a) => s + polyLen(a.pts), 0);
+    const A = ar.reduce((s, a) => s + polyArea(a.pts), 0);
+    tot.innerHTML = `<div class="totals"><div class="side-h" style="margin:0 0 4px">Page totals</div>${m.length + r.length ? `Lengths: <b>${esc(fmtLen(L, page))}</b><br>` : ''}${ar.length ? `Areas: <b>${esc(fmtArea(A, page))}</b>` : ''}</div>`;
+  } else tot.innerHTML = '';
+  const pl = {}; page.anns.filter(a => a.type === 'pipe').forEach(a => { const k = typeName(a).replace('Pipe – ', '') + (a.style.size ? ' ' + a.style.size : ''); pl[k] = (pl[k] || 0) + polyLen(a.pts); });
+  if (Object.keys(pl).length) tot.innerHTML += `<div class="totals"><div class="side-h" style="margin:0 0 4px">Pipework on this page</div>${Object.keys(pl).sort().map(k => `${esc(k)}: <b>${esc(page.mm ? fmtLen(pl[k], page) : 'set a scale to measure')}</b>`).join('<br>')}</div>`;
+  const counts = {}; page.anns.filter(a => a.type === 'sym').forEach(a => { const n = typeName(a); counts[n] = (counts[n] || 0) + 1; });
+  const ck = Object.keys(counts).sort();
+  if (ck.length) tot.innerHTML += `<div class="totals"><div class="side-h" style="margin:0 0 4px">HVAC symbols on this page</div>${ck.map(n => `${counts[n]} × ${esc(n)}`).join('<br>')}</div>`;
+}
+
+/* ---------- Doc panel / status ---------- */
+function updateAll(){
+  const d = S.doc, page = cur();
+  $('#docName').value = d ? d.name : '';
+  $('#hdrDate').textContent = d ? ukDate(d.date) : '';
+  $('#pgInfo').textContent = d ? `Page ${S.cur+1} / ${d.pages.length}` : '–';
+  $('#pgPrev').disabled = !d || S.cur === 0; $('#pgNext').disabled = !d || S.cur >= d.pages.length - 1;
+  const si = $('#scaleInfo'); si.textContent = page ? (page.mm ? 'Scale: ' + scaleText(page) : 'No scale – set') : 'No scale'; si.classList.toggle('none', !page || !page.mm);
+  if (d){
+    $('#dName').value = d.name; $('#dDate').value = d.date; $('#dBy').value = d.initials || ''; $('#dRev').value = d.rev || '';
+    $('#dFooter').checked = !!d.footer; $('#dUnits').value = d.units; $('#dScale').textContent = scaleText(page);
+    $('#dExample').textContent = `${baseName()}.pdf`;
+  }
+  $$('.thumb').forEach(b => b.classList.toggle('on', +b.dataset.i === S.cur));
+  const on = $(`.thumb[data-i="${S.cur}"]`); if (on) on.scrollIntoView({block:'nearest'});
+  updateProps(); updateHint(); renderMarkupList(); updateUndoBtns(); render();
+}
+function updateHint(){ $('#hint').textContent = S.doc ? (HINTS[S.tool] || '') : ''; }
+
+/* ---------- Modal / toast / busy ---------- */
+let modalEl = null;
+function modal(title, html, buttons, onOpen){
+  closeModal();
+  modalEl = document.createElement('div'); modalEl.className = 'modal-bg';
+  modalEl.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><h2>${esc(title)}</h2><div class="body">${html}</div><div class="foot"></div></div>`;
+  const foot = modalEl.querySelector('.foot');
+  buttons.forEach(b => { const el = document.createElement('button'); el.className = 'btn ' + (b.cls || ''); el.textContent = b.label; el.onclick = () => { if (b.fn() !== false) closeModal(); }; foot.appendChild(el); });
+  modalEl.addEventListener('mousedown', e => { if (e.target === modalEl) closeModal(); });
+  modalEl.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') closeModal(); if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'checkbox'){ const p = foot.querySelector('.primary'); if (p) p.click(); } });
+  document.body.appendChild(modalEl);
+  if (onOpen) onOpen();
+}
+function closeModal(){ if (modalEl){ const f = modalEl._onClose; modalEl.remove(); modalEl = null; if (f) f(); } }
+function ask(title, msg, okLabel, cancelLabel){
+  return new Promise(res => {
+    modal(title, `<p style="margin:0">${esc(msg)}</p>`, [{label:cancelLabel, fn: () => { res(false); }}, {label:okLabel, cls:'primary', fn: () => { res(true); }}]);
+    modalEl._onClose = () => res(false);
+  });
+}
+let toastTimer = null;
+function toast(msg, ms = 3000, kind = ''){ const t = $('#toast'); t.textContent = msg; t.className = kind; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, ms); }
+function setDirty(v){
+  S.dirty = v; const el = $('#saveState');
+  if (!S.doc){ el.hidden = true; return; }
+  el.hidden = false; el.className = v ? 'dirty' : 'saved'; el.textContent = v ? 'Not saved' : 'Saved';
+  el.title = v ? 'You have changes that are not saved to a file yet – click Save' : 'All changes saved to a project file';
+}
+function openSaveDialog(){
+  if (!S.doc) return;
+  commitEditor();
+  modal('Save', `
+    <label class="field"><span>File name</span><input type="text" id="svName"></label>
+    <label class="field"><span>Date</span><input type="date" id="svDate"></label>
+    <div class="save-file">Files will be named <b id="svFile"></b></div>
+    <div class="save-grid">
+      <button class="save-opt primary" data-sv="project"><b>Save project</b><small>Keeps everything editable. Reopen it later with Open and carry on marking up (.adimarkup.json)</small></button>
+      <button class="save-opt" data-sv="pdf"><b>PDF</b><small>Marked-up drawing, all pages – to send or issue</small></button>
+      <button class="save-opt" data-sv="png"><b>PNG image</b><small>This page, full quality</small></button>
+      <button class="save-opt" data-sv="jpg"><b>JPEG image</b><small>This page, smaller file</small></button>
+      <button class="save-opt" data-sv="csv"><b>Schedule (CSV)</b><small>Every markup and measurement, for Excel</small></button>
+    </div>
+    <p class="muted" style="margin:0">Files go to your Downloads folder. If your browser asks where to save or to confirm, accept it.</p>`,
+    [{label:'Close', fn: () => true}],
+    () => {
+      const upd = () => { $('#svFile').textContent = baseName() + '.…'; };
+      $('#svName').value = S.doc.name; $('#svDate').value = S.doc.date; upd();
+      $('#svName').addEventListener('input', e => { S.doc.name = e.target.value; setDirty(true); upd(); });
+      $('#svDate').addEventListener('input', e => { S.doc.date = e.target.value; setDirty(true); upd(); });
+      $$('[data-sv]').forEach(b => b.onclick = () => { const k = b.dataset.sv; closeModal(); updateAll(); if (k === 'project') saveProject(false); else exportAs(k); });
+      setTimeout(() => $('[data-sv=project]').focus(), 30);
+    });
+}
+function showBusy(msg){ toast(msg, 60000); }
+function hideBusy(){ const t = $('#toast'); if (/…$/.test(t.textContent)) t.hidden = true; }
+
+function openSettings(){
+  const rows = settings.legend.map((l, i) => `<div class="legend-row"><input type="color" data-lc="${i}" value="${esc(l.c)}" style="width:34px;height:28px;padding:1px;border:1px solid var(--border);border-radius:6px"><input type="text" data-ll="${i}" value="${esc(l.label)}"></div>`).join('');
+  modal('Settings', `
+    <label class="field"><span>Your initials (for stamps &amp; footer)</span><input type="text" id="sInit" maxlength="12" value="${esc(settings.initials)}"></label>
+    <label class="check"><input type="checkbox" id="sFooter" ${settings.footer ? 'checked' : ''}> Add ADI markup stamp (name, date, initials) to pages by default</label>
+    <label class="field"><span>Default units</span><select id="sUnits"><option value="mm">Millimetres (mm)</option><option value="m">Metres (m)</option></select></label>
+    <div class="field"><span>Company logo (header, footer stamp)</span>
+      <div class="row" style="margin:0"><input type="file" id="sLogo" accept="image/png,image/jpeg,image/svg+xml" style="flex:1;min-width:0">${settings.logo ? '<button class="btn danger" id="sLogoClear">Remove</button>' : ''}</div></div>
+    <div class="field"><span>Colour key – what each colour means</span>${rows}
+      <button class="link-btn" id="sLegendReset" style="padding:0">Reset to defaults</button></div>
+    <p class="muted">Settings are stored in this browser on this computer.</p>`,
+    [{label:'Cancel', fn: () => true}, {label:'Save settings', cls:'primary', fn: () => {
+      settings.initials = $('#sInit').value.trim(); settings.footer = $('#sFooter').checked; settings.units = $('#sUnits').value;
+      $$('[data-lc]').forEach(el => settings.legend[+el.dataset.lc].c = el.value);
+      $$('[data-ll]').forEach(el => settings.legend[+el.dataset.ll].label = el.value.trim());
+      saveSettings(); buildSwatches();
+      if (S.doc && !S.doc.initials && settings.initials){ S.doc.initials = settings.initials; }
+      updateAll(); return true;
+    }}],
+    () => {
+      $('#sUnits').value = settings.units;
+      $('#sLogo').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { settings.logo = r.result; saveSettings(); loadLogo(); toast('Logo saved.'); }; r.readAsDataURL(f); };
+      const lc = $('#sLogoClear'); if (lc) lc.onclick = () => { settings.logo = null; saveSettings(); loadLogo(); closeModal(); };
+      $('#sLegendReset').onclick = () => { settings.legend = DEFAULT_LEGEND.map(x => ({...x})); saveSettings(); buildSwatches(); closeModal(); openSettings(); };
+    });
+}
+
+/* ---------- Insert image ---------- */
+async function insertImageFile(file){
+  if (!S.doc || !file) return;
+  let dataURL;
+  if (isTiff(file)){
+    try { dataURL = (await decodeTiff(new Uint8Array(await file.arrayBuffer())))[0].toDataURL('image/png'); }
+    catch (e) { toast('Could not read that TIFF: ' + e.message, 6000, 'err'); return; }
+  } else dataURL = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); });
+  const id = addAsset(dataURL), im = await cacheAsset(id);
+  const page = cur(), W = PW(page), H = PH(page);
+  const vc = [(view.clientWidth/2 - S.ox)/S.zoom, (view.clientHeight/2 - S.oy)/S.zoom];
+  const maxW = Math.min(W, view.clientWidth/S.zoom) * 0.35, maxH = Math.min(H, view.clientHeight/S.zoom) * 0.35;
+  const s = Math.min(maxW / im.naturalWidth, maxH / im.naturalHeight);
+  const w = im.naturalWidth*s, h = im.naturalHeight*s;
+  checkpoint();
+  const a = {id:uid(), type:'image', pts:[[vc[0]-w/2, vc[1]-h/2],[vc[0]+w/2, vc[1]+h/2]], asset:id, style:{opacity:1}};
+  page.anns.push(a); setTool('select'); S.sel = a.id; markDirty(); updateProps();
+  toast('Image added – drag to move, drag a corner handle to resize.');
+}
+
+/* ---------- Signatures (stored only in this browser) ---------- */
+const SIG_FONTS = ['Caveat', 'Dancing Script', 'Homemade Apple'];
+let sigFontsLoaded = false;
+function loadSigFonts(){
+  if (sigFontsLoaded) return; sigFontsLoaded = true;
+  const l = document.createElement('link'); l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Homemade+Apple&display=swap';
+  document.head.appendChild(l);
+}
+const curSig = () => { const l = settings.signatures || []; return l.find(x => x.id === settings.sigSel) || l[0] || null; };
+function trimCanvas(cv, pad = 10){
+  const w = cv.width, h = cv.height, d = cv.getContext('2d').getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y*w + x)*4 + 3] > 10){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  x0 = Math.max(0, x0-pad); y0 = Math.max(0, y0-pad); x1 = Math.min(w-1, x1+pad); y1 = Math.min(h-1, y1+pad);
+  const sw = x1-x0+1, sh = y1-y0+1, k = Math.min(1, 900/sw), out = document.createElement('canvas');
+  out.width = Math.round(sw*k); out.height = Math.round(sh*k);
+  const oc = out.getContext('2d'); oc.imageSmoothingQuality = 'high'; oc.drawImage(cv, x0, y0, sw, sh, 0, 0, out.width, out.height);
+  return out;
+}
+function recolor(cv, col){ const c = cv.getContext('2d'); c.save(); c.globalCompositeOperation = 'source-in'; c.fillStyle = col; c.fillRect(0, 0, cv.width, cv.height); c.restore(); }
+function renderSigList(){
+  const list = settings.signatures || [], cs = curSig();
+  $('#sigList').innerHTML = list.length
+    ? list.map(x => `<button class="sig-chip ${cs && x.id === cs.id ? 'on' : ''}" data-sig="${x.id}" title="Use this signature"><img src="${x.img}" alt="Saved signature"><span class="x" data-sigdel="${x.id}" title="Delete this signature" role="button" aria-label="Delete signature">×</span></button>`).join('')
+    : '<span class="muted">No signature saved yet</span>';
+  $('#sigDate').checked = settings.sigDate !== false;
+}
+async function placeSignature(sig, p){
+  const page = cur(), u = unitOf(page), id = addAsset(sig.img), im = await cacheAsset(id);
+  const w = Math.max(PW(page)*0.14, u*110), h = w*(im.naturalHeight/im.naturalWidth);
+  checkpoint();
+  const a = {id:uid(), type:'image', sig:true, pts:[[p[0]-w/2, p[1]-h/2], [p[0]+w/2, p[1]+h/2]], asset:id, style:{opacity:1}};
+  if (settings.sigDate !== false) a.sigLabel = (S.doc.initials ? `Signed by ${S.doc.initials} · ` : 'Signed ') + ukDate(todayISO());
+  page.anns.push(a);
+  setTool('select'); S.sel = a.id; markDirty(); updateProps();
+}
+function openSignatureModal(){
+  loadSigFonts();
+  let mode = 'draw', ink = '#0b1f4d', drawn = false, upCanvas = null;
+  const typedCanvas = () => {
+    const pv = $('#sigTypePrev'), dpr = 2, txt = $('#sigText').value.trim(), font = $('#sigFont').value;
+    pv.width = pv.clientWidth*dpr; pv.height = pv.clientHeight*dpr;
+    const c = pv.getContext('2d'); c.clearRect(0, 0, pv.width, pv.height);
+    let fs = 70*dpr; c.font = `${fs}px "${font}", cursive`;
+    const tw = c.measureText(txt).width; if (tw > pv.width*0.9){ fs *= pv.width*0.9/tw; c.font = `${fs}px "${font}", cursive`; }
+    c.fillStyle = ink; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, pv.width/2, pv.height/2);
+    return pv;
+  };
+  const refreshTyped = async () => { const f = $('#sigFont').value; try { await document.fonts.load(`70px "${f}"`); } catch (e) {} typedCanvas(); };
+  modal('New signature', `
+    <div class="sig-tabs" role="tablist">
+      <button data-st="draw" class="on">Draw</button><button data-st="type">Type</button><button data-st="upload">Upload image</button>
+    </div>
+    <div id="sigDraw"><div class="sig-pad"><canvas id="sigPadCv"></canvas><span class="ph" id="sigPh">Sign above the line with your mouse, finger or pen</span></div></div>
+    <div id="sigType" hidden>
+      <div class="sig-row" style="margin:0 0 10px"><input type="text" id="sigText" placeholder="Type your name" style="flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--field);color:var(--text)">
+      <select id="sigFont" style="border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--field);color:var(--text)">${SIG_FONTS.map(f => `<option>${f}</option>`).join('')}</select></div>
+      <div class="sig-pad" style="height:130px"><canvas id="sigTypePrev"></canvas></div>
+    </div>
+    <div id="sigUpload" hidden>
+      <input type="file" id="sigFile" accept="image/png,image/jpeg,image/webp">
+      <p class="muted" style="margin:6px 0 10px">A photo or scan of your signature on white paper. The white background is removed automatically.</p>
+      <div class="sig-pad" style="height:150px"><canvas id="sigUpPrev"></canvas></div>
+    </div>
+    <div class="sig-row"><span class="muted">Ink</span>
+      <button class="sw on" data-ink="#0b1f4d" title="Dark blue-black" style="background:#0b1f4d"></button>
+      <button class="sw" data-ink="#000000" title="Black" style="background:#000"></button>
+      <button class="sw" data-ink="#1546b0" title="Blue" style="background:#1546b0"></button>
+      <span class="spacer"></span><button class="btn" id="sigClear">Clear</button></div>
+    <p class="sig-note">Your signature is saved only in this browser on this computer – nobody else can see or use it, and other people save their own. It is an image of your signature (like a signed scan), not a certificate-based digital signature.</p>`,
+    [{label:'Cancel', fn: () => true}, {label:'Save signature', cls:'primary', fn: () => {
+      let src;
+      if (mode === 'draw'){ if (!drawn){ toast('Sign in the box first.'); return false; } src = $('#sigPadCv'); }
+      else if (mode === 'type'){ if (!$('#sigText').value.trim()){ toast('Type your name first.'); return false; } src = typedCanvas(); }
+      else { if (!upCanvas){ toast('Choose an image of your signature first.'); return false; } src = upCanvas; }
+      const t = trimCanvas(src); if (!t){ toast('The signature is empty.'); return false; }
+      const sig = {id:'sig_' + uid(), img:t.toDataURL('image/png')};
+      settings.signatures = [...(settings.signatures || []), sig]; settings.sigSel = sig.id;
+      if (!saveSettings()){ settings.signatures.pop(); return false; }
+      toast('✓ Signature saved in this browser. Click on the drawing to place it.', 5000, 'ok');
+      if (S.doc){ if (S.tool !== 'signature') setTool('signature'); else updateProps(); }
+      return true;
+    }}],
+    () => {
+      const pad = $('#sigPadCv'), dpr = window.devicePixelRatio || 1;
+      pad.width = pad.clientWidth*dpr; pad.height = pad.clientHeight*dpr;
+      const pc = pad.getContext('2d'); pc.lineCap = 'round'; pc.lineJoin = 'round';
+      const pp = e => { const r = pad.getBoundingClientRect(); return [(e.clientX - r.left)*dpr, (e.clientY - r.top)*dpr]; };
+      let last = null, lastMid = null;
+      pad.addEventListener('pointerdown', e => { e.preventDefault(); pad.setPointerCapture(e.pointerId); const p = pp(e); last = lastMid = p; pc.fillStyle = ink; pc.beginPath(); pc.arc(p[0], p[1], 1.4*dpr, 0, Math.PI*2); pc.fill(); drawn = true; $('#sigPh').hidden = true; });
+      pad.addEventListener('pointermove', e => {
+        if (!last) return;
+        const p = pp(e), mid = [(last[0]+p[0])/2, (last[1]+p[1])/2];
+        pc.strokeStyle = ink; pc.lineWidth = 2.8*dpr*(e.pointerType === 'pen' && e.pressure ? 0.5 + e.pressure : 1);
+        pc.beginPath(); pc.moveTo(lastMid[0], lastMid[1]); pc.quadraticCurveTo(last[0], last[1], mid[0], mid[1]); pc.stroke();
+        last = p; lastMid = mid;
+      });
+      const end = () => { last = null; }; pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+      $$('[data-st]').forEach(b => b.onclick = () => {
+        mode = b.dataset.st; $$('[data-st]').forEach(x => x.classList.toggle('on', x === b));
+        $('#sigDraw').hidden = mode !== 'draw'; $('#sigType').hidden = mode !== 'type'; $('#sigUpload').hidden = mode !== 'upload';
+        if (mode === 'type'){ refreshTyped(); setTimeout(() => $('#sigText').focus(), 20); }
+      });
+      $('#sigText').addEventListener('input', typedCanvas); $('#sigFont').addEventListener('change', refreshTyped);
+      $$('[data-ink]').forEach(b => b.onclick = () => {
+        ink = b.dataset.ink; $$('[data-ink]').forEach(x => x.classList.toggle('on', x === b));
+        if (drawn) recolor(pad, ink);
+        if (upCanvas){ recolor(upCanvas, ink); showUp(); }
+        if (mode === 'type') typedCanvas();
+      });
+      $('#sigClear').onclick = () => {
+        if (mode === 'draw'){ pc.clearRect(0, 0, pad.width, pad.height); drawn = false; $('#sigPh').hidden = false; }
+        else if (mode === 'type'){ $('#sigText').value = ''; typedCanvas(); }
+        else { upCanvas = null; $('#sigFile').value = ''; const pv = $('#sigUpPrev'); pv.getContext('2d').clearRect(0, 0, pv.width, pv.height); }
+      };
+      const showUp = () => {
+        const pv = $('#sigUpPrev'); pv.width = pv.clientWidth*2; pv.height = pv.clientHeight*2;
+        const c = pv.getContext('2d'), k = Math.min(pv.width*0.92/upCanvas.width, pv.height*0.9/upCanvas.height);
+        c.clearRect(0, 0, pv.width, pv.height); c.drawImage(upCanvas, (pv.width - upCanvas.width*k)/2, (pv.height - upCanvas.height*k)/2, upCanvas.width*k, upCanvas.height*k);
+      };
+      $('#sigFile').onchange = e => {
+        const f = e.target.files[0]; if (!f) return;
+        const im = new Image();
+        im.onload = () => {
+          const k = Math.min(1, 1400/Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
+          cv.width = Math.round(im.naturalWidth*k); cv.height = Math.round(im.naturalHeight*k);
+          const c = cv.getContext('2d'); c.drawImage(im, 0, 0, cv.width, cv.height);
+          const id = c.getImageData(0, 0, cv.width, cv.height), d = id.data;
+          for (let i = 0; i < d.length; i += 4){ const lum = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]; d[i+3] = clamp(Math.round((225 - lum)*2.6), 0, 255) * d[i+3]/255; }
+          c.putImageData(id, 0, 0); recolor(cv, ink); upCanvas = cv; showUp(); URL.revokeObjectURL(im.src);
+        };
+        im.onerror = () => toast('That image could not be read. Use a PNG or JPEG.');
+        im.src = URL.createObjectURL(f);
+      };
+    });
+}
+
+/* ---------- HVAC symbols panel ---------- */
+function drawSymIcon(cv, def, col){
+  const c = cv.getContext('2d'), [x0,y0,x1,y1] = def.b, k = Math.min((cv.width-18)/(x1-x0), (cv.height-14)/(y1-y0));
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.save(); c.translate(cv.width/2 - (x0+x1)/2*k, cv.height/2 - (y0+y1)/2*k); c.scale(k, k);
+  c.strokeStyle = c.fillStyle = col; c.lineWidth = 2.6/k; c.lineJoin = 'round'; c.lineCap = 'round';
+  def.d(symKit(c, col)); c.restore();
+}
+function renderSymGrid(){
+  const q = ($('#symSearch').value || '').toLowerCase().trim(), col = S.styles.sym.color, grid = $('#symGrid');
+  grid.innerHTML = '';
+  for (const g of SYM_GROUPS){
+    const items = SYMS.filter(x => x.g === g && (!q || `${x.n} ${x.k} ${g}`.toLowerCase().includes(q)));
+    if (!items.length) continue;
+    const h = document.createElement('div'); h.className = 'sym-g'; h.textContent = g; grid.appendChild(h);
+    const wrap = document.createElement('div'); wrap.className = 'sym-grid'; grid.appendChild(wrap);
+    for (const x of items){
+      const b = document.createElement('button'); b.className = 'sym-btn' + (x.id === S.sym ? ' on' : ''); b.dataset.sym = x.id; b.title = x.n;
+      const cv = document.createElement('canvas'); cv.width = 128; cv.height = 80; drawSymIcon(cv, x, col);
+      const sp = document.createElement('span'); sp.textContent = x.s;
+      b.append(cv, sp); wrap.appendChild(b);
+    }
+  }
+  if (!grid.children.length) grid.innerHTML = '<p class="muted">No symbols match that search.</p>';
+}
+function syncSymDir(){ const deg = Math.round((S.symRot || 0)*180/Math.PI); $$('[data-symdir]').forEach(b => b.classList.toggle('on', (+b.dataset.symdir === 0 && deg === 0) || (+b.dataset.symdir === 90 && Math.abs(deg) === 90))); }
+
+/* ---------- Selection actions ---------- */
+function deleteSel(){ const a = getSel(); if (!a) return; checkpoint(); if (a.type === 'schedule') cur().schedOff = true; cur().anns = cur().anns.filter(x => x !== a); S.sel = null; markDirty(); updateProps(); }
+function cloneAnn(a, off){ const c = JSON.parse(JSON.stringify(a, strip)); c.id = uid(); c.pts = c.pts.map(p => [p[0]+off, p[1]+off]); return c; }
+function duplicateSel(){ const a = getSel(); if (!a) return; checkpoint(); const c = cloneAnn(a, unitOf(cur())*15); cur().anns.push(c); S.sel = c.id; markDirty(); updateProps(); }
+function bringFront(){ const a = getSel(); if (!a) return; checkpoint(); const p = cur(); p.anns = p.anns.filter(x => x !== a); p.anns.push(a); markDirty(); }
+function nudge(dx, dy){ const a = getSel(); if (!a) return; if (!S._nudging){ checkpoint(); S._nudging = true; } a.pts.forEach(q => { q[0] += dx; q[1] += dy; }); markDirty(); clearTimeout(S._nudgeT); S._nudgeT = setTimeout(() => S._nudging = false, 600); }
+
+/* ---------- Keyboard ---------- */
+const KEYMAP = {}; TOOLS.forEach(t => { if (t && t[1]) KEYMAP[t[1].toLowerCase()] = t[0]; });
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (modalEl || tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (mod && k === 'o'){ e.preventDefault(); $('#fileOpen').click(); return; }
+  if (!S.doc) return;
+  if (mod && k === 's'){ e.preventDefault(); saveProject(e.shiftKey); return; }
+  if (mod && k === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && k === 'y'){ e.preventDefault(); redo(); return; }
+  if (mod && k === 'd'){ e.preventDefault(); duplicateSel(); return; }
+  if (mod && k === 'c'){ const a = getSel(); if (a){ S.clip = JSON.stringify(a, strip); toast('Copied – Ctrl+V to paste (any page).', 1500); } return; }
+  if (mod) return;
+  if (e.key === ' '){ e.preventDefault(); if (!S.space){ S.space = true; view.classList.add('pan'); } return; }
+  if (e.key === 'Escape'){ if (S.drawing){ if (CLICK_TOOLS.has(S.drawing.type) && S.drawing.pts.length > 3) finishClickShape(); else cancelDrawing(); } else if (S.sel){ S.sel = null; updateProps(); renderMarkupList(); render(); } else setTool('select'); return; }
+  if (e.key === 'Enter'){ if (S.drawing && CLICK_TOOLS.has(S.drawing.type)) finishClickShape(); else { const a = getSel(); if (a && (a.type === 'text' || a.type === 'callout')) { e.preventDefault(); editText(a, false); } } return; }
+  if (e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); deleteSel(); return; }
+  if (e.key === 'PageDown'){ e.preventDefault(); gotoPage(S.cur+1); return; }
+  if (e.key === 'PageUp'){ e.preventDefault(); gotoPage(S.cur-1); return; }
+  if (e.key.startsWith('Arrow') && getSel()){ e.preventDefault(); const s = (e.shiftKey ? 10 : 1)/S.zoom; nudge(e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0, e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0); return; }
+  if (e.key === '+' || e.key === '='){ zoomCenter(1.25); return; }
+  if (e.key === '-' || e.key === '_'){ zoomCenter(0.8); return; }
+  if (e.key === '0'){ fitPage(); return; }
+  if ((e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') && S.tool === 'symbols' && !getSel()){ e.preventDefault(); S.symRot = normAng((S.symRot || 0) + (e.key === '[' || e.key === '{' ? -1 : 1)*(e.shiftKey ? 90 : 15)*Math.PI/180); syncSymDir(); render(); return; }
+  if ((e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') && getSel()){ e.preventDefault(); rotateSelBy((e.key === '[' || e.key === '{' ? -1 : 1) * (e.shiftKey ? 90 : 15)); return; }
+  if (KEYMAP[k]) setTool(KEYMAP[k]);
+});
+document.addEventListener('keyup', e => { if (e.key === ' '){ S.space = false; view.classList.toggle('pan', S.tool === 'pan'); } });
+document.addEventListener('paste', async e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (!S.doc || modalEl || tag === 'input' || tag === 'textarea') return;
+  const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => i.type.startsWith('image/'));
+  if (item){ e.preventDefault(); insertImageFile(item.getAsFile()); return; }
+  if (S.clip){ e.preventDefault(); checkpoint(); const c = cloneAnn(JSON.parse(S.clip), unitOf(cur())*15); cur().anns.push(c); S.clip = JSON.stringify(c); setTool('select'); S.sel = c.id; markDirty(); updateProps(); }
+});
+
+/* ---------- Wire up UI ---------- */
+function buildToolbar(){
+  const el = $('#tools');
+  el.innerHTML = TOOLS.map(t => t ? `<button class="tool" data-tool="${t[0]}" title="${esc(t[2])}${t[1] ? ' (' + t[1] + ')' : ''}" aria-label="${esc(t[2])}"><svg class="i" viewBox="0 0 24 24">${IC[t[0]]}</svg></button>` : '<div class="tool-sep"></div>').join('');
+  el.addEventListener('click', e => { const b = e.target.closest('.tool'); if (b){ if (!S.doc){ toast('Open a drawing first.'); return; } setTool(b.dataset.tool); } });
+  $('#pStamp').innerHTML = Object.keys(STAMPS).map(s => `<option>${s}</option>`).join('');
+}
+function init(){
+  buildToolbar(); buildSwatches(); loadLogo();
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onUp);
+  canvas.addEventListener('dblclick', onDbl);
+  canvas.addEventListener('pointerleave', () => { if (S.hover){ S.hover = null; render(); } });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  view.addEventListener('wheel', onWheel, {passive:false});
+  view.tabIndex = -1;
+  let lastTop = view.getBoundingClientRect().top;
+  new ResizeObserver(() => { const t = view.getBoundingClientRect().top; if (S.doc && t !== lastTop) S.oy += lastTop - t; lastTop = t; draw(); }).observe(view);
+
+  $('#btnOpen').onclick = $('#btnOpen2').onclick = () => $('#fileOpen').click();
+  $('#fileOpen').onchange = e => { openFile(e.target.files[0]); e.target.value = ''; };
+  $('#fileImage').onchange = e => { insertImageFile(e.target.files[0]); e.target.value = ''; };
+  $('#btnSave').onclick = openSaveDialog;
+  $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
+  $('#btnExport').onclick = e => { e.stopPropagation(); $('#exportMenu').hidden = !$('#exportMenu').hidden; };
+  $$('[data-exp]').forEach(b => b.onclick = () => exportAs(b.dataset.exp));
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-wrap')) $('#exportMenu').hidden = true; });
+  $('#btnSettings').onclick = openSettings;
+  $('#btnSide').onclick = () => { if (window.innerWidth <= 900) document.body.classList.toggle('show-side'); else document.body.classList.toggle('no-side'); setTimeout(render, 50); };
+
+  // drag & drop
+  let dragDepth = 0;
+  window.addEventListener('dragenter', e => { e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+  window.addEventListener('dragleave', () => { if (--dragDepth <= 0){ dragDepth = 0; document.body.classList.remove('dragging'); } });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    if (S.doc && (/^image\//.test(f.type) || isTiff(f))){
+      ask('Image dropped', 'Place this image on the current page, or open it as a new document?', 'Place on page', 'Open as new document').then(ins => ins ? insertImageFile(f) : openFile(f));
+    } else openFile(f);
+  });
+
+  // props
+  $('#swatches').addEventListener('click', e => { const b = e.target.closest('.sw'); if (b) applyProp('color', b.dataset.c, true); });
+  bindProp('#pColor', 'color', v => v);
+  bindProp('#pLw', 'lw', v => +v); bindProp('#pFs', 'fs', v => +v); bindProp('#pOpacity', 'opacity', v => +v/100);
+  bindProp('#pDash', 'dash', v => v); bindProp('#pFill', 'fill', v => v); bindProp('#pTFill', 'tfill', v => v);
+  bindProp('#pStamp', 'stamp', v => v); bindProp('#pRev', 'rev', v => v.trim());
+  bindProp('#pFillColor', 'fillColor', v => v); bindProp('#pShape', 'shape', v => v);
+  $$('[data-rot]').forEach(b => b.onclick = () => rotateSelBy(+b.dataset.rot));
+  $('#pAngle').addEventListener('change', e => setSelAngle(parseFloat(e.target.value)));
+  $('#pAngle').addEventListener('keydown', e => e.stopPropagation());
+  $('#btnDel').onclick = deleteSel; $('#btnDup').onclick = duplicateSel; $('#btnFront').onclick = bringFront;
+  $('#sigNew').onclick = openSignatureModal;
+  S.sym = 'iso'; S.symRot = 0; S.symSize = 1;
+  $('#symGrid').addEventListener('click', e => { const b = e.target.closest('[data-sym]'); if (!b) return; S.sym = b.dataset.sym; $$('#symGrid .sym-btn').forEach(x => x.classList.toggle('on', x === b)); render(); });
+  $('#symSearch').addEventListener('input', renderSymGrid);
+  $('#symSched').checked = settings.autoSchedule !== false;
+  $('#symAutoTag').checked = settings.autoTag !== false;
+  $('#symAutoTag').addEventListener('change', e => { settings.autoTag = e.target.checked; saveSettings(); });
+  $('#symSched').addEventListener('change', e => {
+    settings.autoSchedule = e.target.checked; saveSettings();
+    const page = cur(); if (!page) return;
+    if (e.target.checked){ page.schedOff = false; if (page.anns.some(a => a.type === 'sym') && !page.anns.some(a => a.type === 'schedule')){ checkpoint(); ensureSchedule(page); markDirty(); } }
+  });
+  $('#symSearch').addEventListener('keydown', e => e.stopPropagation());
+  $('#symClose').onclick = () => setTool('select');
+  $$('[data-symdir]').forEach(b => b.onclick = () => { S.symRot = (+b.dataset.symdir)*Math.PI/180; syncSymDir(); });
+  $('#symSize').addEventListener('input', e => { S.symSize = +e.target.value/100; $('#symSizeLbl').textContent = e.target.value + '%'; });
+  $('#pSvc').innerHTML = SERVICES.map(x => `<option value="${x.id}">${esc(x.n)}</option>`).join('');
+  bindProp('#pSvc', 'svc', v => v); bindProp('#pSize', 'size', v => v.trim());
+  $('#pNote').addEventListener('input', e => applyProp('note', e.target.value, false));
+  $('#pNote').addEventListener('change', e => applyProp('note', e.target.value, true));
+  $('#pTag').addEventListener('input', e => applyProp('tag', e.target.value, false));
+  $('#pTag').addEventListener('change', e => applyProp('tag', e.target.value, true));
+  $('#pTag').addEventListener('keydown', e => e.stopPropagation());
+  $('#sigDate').onchange = e => { settings.sigDate = e.target.checked; saveSettings(); };
+  $('#sigList').addEventListener('click', e => {
+    const del = e.target.closest('[data-sigdel]');
+    if (del){
+      e.stopPropagation();
+      ask('Delete signature?', 'This removes the saved signature from this browser. Signatures already placed on drawings stay where they are.', 'Delete', 'Keep').then(ok => {
+        if (!ok) return;
+        settings.signatures = (settings.signatures || []).filter(x => x.id !== del.dataset.sigdel);
+        if (settings.sigSel === del.dataset.sigdel) settings.sigSel = null;
+        saveSettings(); updateProps();
+      });
+      return;
+    }
+    const b = e.target.closest('[data-sig]'); if (b){ settings.sigSel = b.dataset.sig; saveSettings(); renderSigList(); }
+  });
+
+  // status
+  $('#pgPrev').onclick = () => gotoPage(S.cur-1); $('#pgNext').onclick = () => gotoPage(S.cur+1);
+  $('#zIn').onclick = () => zoomCenter(1.25); $('#zOut').onclick = () => zoomCenter(0.8);
+  $('#zFit').onclick = fitPage; $('#zWidth').onclick = fitWidth;
+  $('#scaleBtn').onclick = () => S.doc && openScaleModal(); $('#dScaleBtn').onclick = () => S.doc && openScaleModal();
+  $('#btnRotate').onclick = rotatePage;
+
+  // tabs
+  $$('.tabs button').forEach(b => b.onclick = () => { $$('.tabs button').forEach(x => x.classList.toggle('on', x === b)); $$('.tab').forEach(t => t.hidden = t.id !== 'tab-' + b.dataset.tab); });
+  $('#mkList').addEventListener('click', e => {
+    const del = e.target.closest('[data-del]');
+    if (del){ S.sel = del.dataset.del; deleteSel(); return; }
+    const li = e.target.closest('.mk'); if (li){ setTool('select'); S.sel = li.dataset.id; updateProps(); renderMarkupList(); render(); }
+  });
+
+  // document fields
+  const docField = (id, key, after) => $(id).addEventListener('input', e => { if (!S.doc) return; S.doc[key] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; if (after) after(); setDirty(true); scheduleAutosave(); updateAll(); });
+  $('#docName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; setDirty(true); scheduleAutosave(); $('#dName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
+  $('#dName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; setDirty(true); scheduleAutosave(); $('#docName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
+  docField('#dDate', 'date'); docField('#dBy', 'initials'); docField('#dRev', 'rev');
+  $('#dFooter').addEventListener('change', e => { if (!S.doc) return; S.doc.footer = e.target.checked; setDirty(true); scheduleAutosave(); render(); });
+  $('#dUnits').addEventListener('change', e => { if (!S.doc) return; S.doc.units = e.target.value; setDirty(true); scheduleAutosave(); updateAll(); });
+  $('#dToday').onclick = () => { if (!S.doc) return; S.doc.date = todayISO(); setDirty(true); scheduleAutosave(); updateAll(); };
+
+  window.addEventListener('beforeunload', e => { if (S.dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+  // restore last session
+  (async () => {
+    try {
+      const pj = await idbGet('autosave');
+      if (pj && pj.source){
+        $('#restoreBox').hidden = false;
+        const when = new Date(pj.savedAt);
+        $('#btnRestore').textContent = `Restore “${pj.name}” (${when.toLocaleDateString('en-GB')} ${when.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})})`;
+        $('#btnRestore').onclick = () => loadProject(pj, true).catch(err => toast('Could not restore: ' + err.message));
+      }
+    } catch (e) { /* storage unavailable */ }
+  })();
+  setTool('select'); updateAll();
+}
+init();
+</script>
+</body>
+</html>
