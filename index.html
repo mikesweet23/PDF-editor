@@ -248,6 +248,44 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
   .tool{width:38px}
 }
 @media (max-width:560px){ .wordmark span{display:none} .hbtn .lbl{display:none} }
+/* ---------- Touch, Apple Pencil and phone layouts ---------- */
+html,body{touch-action:manipulation}
+#view,#tools,#status,.touch-bar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.touch-bar{display:none}
+body.touch-ui .touch-bar{display:flex;position:absolute;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom, 0px));gap:6px;padding:6px;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:7;max-width:calc(100% - 20px);overflow-x:auto}
+.touch-bar button{min-height:44px;padding:0 14px;border:1px solid var(--border);background:var(--field);color:var(--text);border-radius:10px;font-weight:600;white-space:nowrap;touch-action:manipulation}
+.touch-bar button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.touch-bar .tb-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.touch-bar .tb-danger{color:var(--danger)}
+#view.sym-open .touch-bar{left:auto;right:10px;transform:none}
+body.touch-ui .tool{height:42px}
+body.touch-ui #tools{grid-auto-rows:42px}
+body.touch-ui .sw{width:28px;height:28px}
+body.touch-ui .pbtn,body.touch-ui .prop select,body.touch-ui .prop input[type=text],body.touch-ui .sbtn{min-height:36px}
+body.touch-ui .sym-btn{min-height:80px}
+
+/* Phones: tools along the bottom, side panel as a drawer, symbols as a bottom sheet */
+@media (max-width:600px){
+  body,body.no-side,body.show-side{grid-template-columns:1fr;grid-template-rows:52px auto 1fr 34px auto;grid-template-areas:"hdr" "props" "view" "status" "tools"}
+  #tools{display:flex !important;flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-top:1px solid var(--border);padding:4px 6px calc(4px + env(safe-area-inset-bottom, 0px));gap:2px;align-items:center;justify-content:flex-start}
+  .tool,body.touch-ui .tool{width:44px;height:44px}
+  .tool-sep{width:1px !important;height:28px !important;margin:0 4px !important;flex:0 0 auto}
+  #props{flex-wrap:nowrap;overflow-x:auto;padding:6px 10px}
+  #sidebar{display:none}
+  body.show-side #sidebar{display:flex;position:fixed;z-index:120;top:52px;right:0;bottom:0;width:min(340px,88vw);box-shadow:-10px 0 30px rgba(0,0,0,.25)}
+  #hint,#btnUndo,#btnRedo,.hdr-date{display:none}
+  #status{gap:6px;padding:0 6px}
+  .sym-panel{top:auto;left:0;right:0;bottom:0;width:100%;height:82%;border-radius:14px 14px 0 0}
+  .sym-head{padding:6px 12px}
+  .sym-tools{gap:6px;padding:8px 12px}
+  .sym-help{display:none}
+  .sym-grid{grid-template-columns:repeat(4,1fr)}
+  .sym-btn{min-height:70px;font-size:10px}
+  .sym-btn canvas{width:56px;height:35px}
+  .menu-wrap{display:none}
+  #view.sym-open .touch-bar{top:10px;bottom:auto;left:50%;right:auto;transform:translateX(-50%)}
+  .modal{max-height:85vh}
+}
 </style>
 </head>
 <body>
@@ -316,6 +354,16 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 
 <main id="view">
   <canvas id="stage"></canvas>
+  <div id="touchBar" class="touch-bar" role="toolbar" aria-label="Touch controls" hidden>
+    <button data-tb="undo" title="Undo">↶ Undo</button>
+    <button data-tb="redo" title="Redo">↷ Redo</button>
+    <button data-tb="finish" class="tb-primary" title="Finish the line or shape">✓ Finish</button>
+    <button data-tb="cancel" title="Cancel what you are drawing">✕ Cancel</button>
+    <button data-tb="free" aria-pressed="false" title="Draw lines at any angle (like holding Alt)">∠ Free angle</button>
+    <button data-tb="square" aria-pressed="false" title="Draw squares and circles (like holding Shift)">□ Square</button>
+    <button data-tb="delete" class="tb-danger" title="Delete the selected markup">Delete</button>
+    <button data-tb="pencil" aria-pressed="false" title="Only the Pencil draws; fingers pan and zoom">✎ Pencil only</button>
+  </div>
   <div id="symPanel" class="sym-panel" hidden>
     <div class="sym-head"><b>HVAC symbols</b><button class="sym-x" id="symClose" title="Close (Esc)" aria-label="Close symbols">×</button></div>
     <div class="sym-tools">
@@ -540,6 +588,10 @@ const S = {
   imgCache:{}, pointers:new Map(), pinch:null,
 };
 const view = $('#view'), canvas = $('#stage'), ctx = canvas.getContext('2d');
+/* iPad/iPhone browsers refuse canvases larger than ~16.7 million pixels, so render smaller there. */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const CANVAS_MAX = IS_IOS ? 16e6 : 28e6, CANVAS_SIDE = IS_IOS ? 4096 : 7000, EXPORT_MAX = IS_IOS ? 16e6 : 40e6, OVERLAY_MAX = IS_IOS ? 16e6 : 32e6;
+const SAVED_WHERE = IS_IOS ? '' : ' to your Downloads folder';
 
 const cur = () => S.doc && S.doc.pages[S.cur];
 const PW = p => p.rot % 180 ? p.h : p.w;
@@ -567,7 +619,7 @@ function constrainAngle(from, p){ const dx = p[0]-from[0], dy = p[1]-from[1], L 
    A snap onto an existing end point always wins so lines still join up exactly. */
 const LINE_TYPES = new Set(['line','arrow','measure','calibrate','callout','polygon','run','area','pipe']);
 function angleLock(from, p, e){
-  if (!from || (e && e.altKey) || settings.angleSnap === false || S.snap) return p;
+  if (!from || (e && e.altKey) || S.freeAngle || settings.angleSnap === false || S.snap) return p;
   return constrainAngle(from, p);
 }
 function constrainSquare(from, p){ const dx = p[0]-from[0], dy = p[1]-from[1], s = Math.max(Math.abs(dx), Math.abs(dy)); return [from[0]+Math.sign(dx||1)*s, from[1]+Math.sign(dy||1)*s]; }
@@ -1230,13 +1282,13 @@ function hitAnn(a, p, tol){
 const editablePts = a => ['pen','marker','text','legend','schedule'].includes(a.type) ? [] : a.pts;
 const handlePts = a => editablePts(a).map((q, i) => (a.type === 'cloud' && i === 2) ? q : toWorld(a, q));
 function rotHandle(a){
-  const b = annBBox(a), z = S.zoom, base = [b[0]+b[2]/2, b[1]-4/z], tip = [base[0], base[1]-24/z];
+  const b = annBBox(a), z = S.zoom, base = [b[0]+b[2]/2, b[1]-4/z], tip = [base[0], base[1]-(S.touchUI ? 36 : 24)/z];
   return {base: toWorld(a, base), p: toWorld(a, tip)};
 }
 
 /* ---------- Background rendering ---------- */
 let bgTimer = null, bgToken = 0;
-function maxScaleFor(page){ const W = PW(page), H = PH(page); let m = Math.min(7000/Math.max(W,H), Math.sqrt(28e6/(W*H))); if (S.doc.type === 'image') m = Math.min(m, 1); return m; }
+function maxScaleFor(page){ const W = PW(page), H = PH(page); let m = Math.min(CANVAS_SIDE/Math.max(W,H), Math.sqrt(CANVAS_MAX/(W*H))); if (S.doc.type === 'image') m = Math.min(m, 1); return m; }
 function wantedScale(page){ const need = S.zoom * (window.devicePixelRatio || 1); const q = Math.pow(2, Math.ceil(Math.log2(Math.max(need, 0.25)))); return Math.min(q, maxScaleFor(page)); }
 function needBg(page){ return !page.bg || page.bgRot !== page.rot || page.bgScale < wantedScale(page) * 0.99; }
 function requestBg(){
@@ -1248,6 +1300,7 @@ function requestBg(){
     try {
       const cv = await renderPageCanvas(idx, sc);
       if (tok !== bgToken || page.rot !== rot) return;
+      if (page.bg && page.bg !== cv) page.bg.width = 0;   // free memory straight away (matters on iPad/iPhone)
       page.bg = cv; page.bgScale = sc; page.bgRot = rot;
       render();
     } catch (e) { console.error(e); }
@@ -1299,17 +1352,19 @@ function draw(){
     ctx.save(); applyRot(ctx, sel); ctx.strokeRect(b[0]-pad, b[1]-pad, b[2]+pad*2, b[3]+pad*2); ctx.restore();
     if (sel.type === 'patch'){ ctx.strokeStyle = '#c62828'; ctx.strokeRect(...sel.src); ctx.strokeStyle = '#0096d6'; }
     if (sel.type === 'cloud' && sel.pts[2] && sel.text && sel._nb){ const nb = sel._nb; ctx.strokeRect(nb[0]-pad, nb[1]-pad, nb[2]+pad*2, nb[3]+pad*2); }
-    ctx.setLineDash([]); const hs = 9/z;
+    ctx.setLineDash([]); const hs = (S.touchUI ? 15 : 9)/z;
     if (!NO_ROTATE.has(sel.type)){
       const rh = rotHandle(sel);
       pathPts(ctx, [rh.base, rh.p]); ctx.stroke();
-      ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], 6/z, 0, Math.PI*2); ctx.fillStyle = '#0096d6'; ctx.fill();
+      ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], (S.touchUI ? 11 : 6)/z, 0, Math.PI*2); ctx.fillStyle = '#0096d6'; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5/z; ctx.beginPath(); ctx.arc(rh.p[0], rh.p[1], 3/z, -2.2, 1.6); ctx.stroke();
       ctx.strokeStyle = '#0096d6';
     }
     for (const p of handlePts(sel)){ ctx.fillStyle = '#fff'; ctx.fillRect(p[0]-hs/2, p[1]-hs/2, hs, hs); ctx.strokeRect(p[0]-hs/2, p[1]-hs/2, hs, hs); }
     ctx.restore();
   }
+  updateTouchBar();
+  view.classList.toggle('sym-open', S.tool === 'symbols');
   if (S.snap){ const s = 10/z; ctx.save(); ctx.strokeStyle = '#00c853'; ctx.lineWidth = 2/z; ctx.strokeRect(S.snap[0]-s/2, S.snap[1]-s/2, s, s); ctx.restore(); }
   $('#zoomPct').textContent = Math.round(z*100) + '%';
 }
@@ -1597,9 +1652,29 @@ async function saveBlob(blob, filename, desc, mime, ext, handleKey){
       console.warn('Save picker unavailable, downloading instead', e);
     }
   }
+  if (IS_IOS && navigator.canShare){
+    const file = new File([blob], filename, {type: mime});
+    if (navigator.canShare({files:[file]})) return shareFile(file);
+  }
+  plainDownload(blob, filename);
+  return filename;
+}
+function plainDownload(blob, filename){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
-  return filename;
+}
+/* iPad/iPhone: hand the finished file to the Share sheet (Save to Files, Mail, Teams, OneDrive…).
+   A button is used because the Share sheet must be opened by a tap. */
+function shareFile(file){
+  hideBusy();
+  return new Promise(res => {
+    modal('Your file is ready', `<p style="margin:0;word-break:break-all"><b>${esc(file.name)}</b></p><p class="muted" style="margin:8px 0 0">Tap <b>Share / Save</b>, then choose <b>Save to Files</b>, Mail, Teams or OneDrive.</p>`, [
+      {label:'Cancel', fn: () => { res(null); }},
+      {label:'Download', fn: () => { modalEl._onClose = null; plainDownload(file, file.name); res(file.name); }},
+      {label:'Share / Save', cls:'primary', fn: () => { modalEl._onClose = null; navigator.share({files:[file], title:file.name}).then(() => res(file.name), err => { if (err && err.name === 'AbortError') res(null); else { plainDownload(file, file.name); res(file.name); } }); }},
+    ]);
+    modalEl._onClose = () => res(null);
+  });
 }
 async function saveProject(saveAs){
   if (!S.doc) return;
@@ -1607,7 +1682,7 @@ async function saveProject(saveAs){
   if (saveAs) S.fileHandle = null;
   const blob = new Blob([JSON.stringify(buildProject(false))], {type:'application/json'});
   const n = await saveBlob(blob, `${baseName()}.adimarkup.json`, 'ADI Markup project', 'application/json', '.json', 'fileHandle');
-  if (n){ setDirty(false); toast(`✓ Saved “${n}” to your Downloads folder. Reopen it with Open to keep editing.`, 7000, 'ok'); }
+  if (n){ setDirty(false); toast(`✓ Saved “${n}”${SAVED_WHERE}. Reopen it with Open to keep editing.`, 7000, 'ok'); }
 }
 
 /* ---------- Autosave (IndexedDB, this browser only) ---------- */
@@ -1620,7 +1695,7 @@ function scheduleAutosave(){ clearTimeout(autosaveTimer); autosaveTimer = setTim
 /* ---------- Export ---------- */
 function overlayCanvas(page, k){
   const W = PW(page), H = PH(page);
-  k = Math.min(k, Math.sqrt(32e6/(W*H)));
+  k = Math.min(k, Math.sqrt(OVERLAY_MAX/(W*H)), CANVAS_SIDE/Math.max(W, H));
   const cv = document.createElement('canvas'); cv.width = Math.round(W*k); cv.height = Math.round(H*k);
   const c = cv.getContext('2d'); c.scale(cv.width/W, cv.height/H);
   page.anns.forEach(a => drawAnn(c, a, page)); drawFooter(c, page);
@@ -1628,7 +1703,7 @@ function overlayCanvas(page, k){
 }
 async function compositeCanvas(idx, k){
   const page = S.doc.pages[idx], W = PW(page), H = PH(page);
-  k = Math.min(k, Math.sqrt(40e6/(W*H)));
+  k = Math.min(k, Math.sqrt(EXPORT_MAX/(W*H)), (IS_IOS ? 4096 : 12000)/Math.max(W, H));
   const cv = await renderPageCanvas(idx, k);
   const c = cv.getContext('2d'); c.setTransform(cv.width/W, 0, 0, cv.height/H, 0, 0);
   page.anns.forEach(a => drawAnn(c, a, page)); drawFooter(c, page);
@@ -1645,8 +1720,8 @@ async function exportAs(kind){
     const multi = S.doc.pages.length > 1, fn = `${baseName()}${multi ? '_p' + (S.cur+1) : ''}`;
     const k = S.doc.type === 'pdf' ? 300/72 : 1;
     const cv = await compositeCanvas(S.cur, k);
-    if (kind === 'png'){ const n = await saveBlob(await canvasBlob(cv, 'image/png'), fn + '.png', 'PNG image', 'image/png', '.png'); if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok'); }
-    else { const n = await saveBlob(await canvasBlob(cv, 'image/jpeg', 0.92), fn + '.jpg', 'JPEG image', 'image/jpeg', '.jpg'); if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok'); }
+    if (kind === 'png'){ const n = await saveBlob(await canvasBlob(cv, 'image/png'), fn + '.png', 'PNG image', 'image/png', '.png'); if (n) toast(`✓ Exported “${n}”${SAVED_WHERE}.`, 6000, 'ok'); }
+    else { const n = await saveBlob(await canvasBlob(cv, 'image/jpeg', 0.92), fn + '.jpg', 'JPEG image', 'image/jpeg', '.jpg'); if (n) toast(`✓ Exported “${n}”${SAVED_WHERE}.`, 6000, 'ok'); }
   } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e), 6000, 'err'); }
   finally { hideBusy(); }
 }
@@ -1682,7 +1757,7 @@ async function exportPDF(){
   out.setTitle(d.name || 'Document'); out.setAuthor(['ADI Climate Systems', d.initials].filter(Boolean).join(' – ')); out.setCreator('ADI Markup'); out.setModificationDate(new Date());
   const bytes = await out.save();
   const n = await saveBlob(new Blob([bytes], {type:'application/pdf'}), `${baseName()}.pdf`, 'PDF document', 'application/pdf', '.pdf');
-  if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
+  if (n) toast(`✓ Exported “${n}”${SAVED_WHERE}.`, 6000, 'ok');
 }
 async function exportCSV(){
   const d = S.doc, rows = [['Document','Date','Page','Markup','Colour','Colour meaning','Size','Length (mm)','Area (m²)','Perimeter (mm)','Text / detail']];
@@ -1699,11 +1774,11 @@ async function exportCSV(){
   }));
   const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }).join(',')).join('\r\n');
   const n = await saveBlob(new Blob([csv], {type:'text/csv'}), `${baseName()}_schedule.csv`, 'CSV spreadsheet', 'text/csv', '.csv');
-  if (n) toast(`✓ Exported “${n}” to your Downloads folder.`, 6000, 'ok');
+  if (n) toast(`✓ Exported “${n}”${SAVED_WHERE}.`, 6000, 'ok');
 }
 
 /* ---------- Pointer interaction ---------- */
-const tolPx = () => 7 / S.zoom;
+const tolPx = () => (S.ptrType === 'touch' ? 16 : S.ptrType === 'pen' ? 10 : 7) / S.zoom;
 function snapPt(p, exclude){
   let best = null, bd = 11 / S.zoom;
   for (const a of cur().anns){
@@ -1739,18 +1814,23 @@ function cancelDrawing(){ S.drawing = null; S.snap = null; render(); }
 function onDown(e){
   if (!S.doc) return;
   e.preventDefault();
+  noteInput(e);
+  if (e.pointerType === 'touch' && S.penDown) return;          // palm resting on the screen while the Pencil is down
+  if (e.pointerType === 'pen') S.penDown = true;
   if (document.activeElement && document.activeElement !== document.body && !(editor && document.activeElement === editor.ta)) document.activeElement.blur();
   S.pointers.set(e.pointerId, [e.clientX, e.clientY]);
-  if (S.pointers.size === 2){ // pinch
-    cancelDrawing(); S.drag = null;
+  if (S.pointers.size === 2){ // pinch / two-finger pan (keeps a pipe or polygon that is being drawn)
+    S.pendingClick = null;
+    if (S.drawing && !CLICK_TOOLS.has(S.drawing.type)) cancelDrawing();
+    S.drag = null;
     const [a, b] = [...S.pointers.values()];
     S.pinch = {d: Math.hypot(b[0]-a[0], b[1]-a[1]), m: [(a[0]+b[0])/2, (a[1]+b[1])/2]};
     return;
   }
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   commitEditor();
   const p = toPage(e);
-  if (e.button === 1 || e.button === 2 || S.tool === 'pan' || S.space){ startPan(e); return; }
+  if (e.button === 1 || e.button === 2 || S.tool === 'pan' || S.space || (S.pencilOnly && e.pointerType === 'touch' && S.tool !== 'select')){ startPan(e); return; }
   if (e.button !== 0) return;
   const page = cur(), t = S.tool;
 
@@ -1780,16 +1860,7 @@ function onDown(e){
     render(); return;
   }
   if (FREE_TOOLS.has(t)){ S.drawing = {id:uid(), type:t, pts:[q], style, _tool:t}; return; }
-  if (CLICK_TOOLS.has(t)){
-    if (!S.drawing){ S.drawing = {id:uid(), type:t, pts:[q, q.slice()], style, _tool:t, _live:true}; }
-    else {
-      const d = S.drawing, fp = d.pts[0];
-      if (d.pts.length > 3 && dist(q, fp) < 1e-6 && t !== 'run'){ d.pts.pop(); finishClickShape(); return; }
-      q = angleLock(d.pts[d.pts.length-2], q, e);
-      d.pts[d.pts.length-1] = q; d.pts.push(q.slice());
-    }
-    render(); return;
-  }
+  if (CLICK_TOOLS.has(t)){ S.pendingClick = {id:e.pointerId}; return; }   // point is added on release, so a second finger can still pan/zoom
   if (t === 'text'){
     checkpoint();
     const a = {id:uid(), type:'text', pts:[p], style, text:''};
@@ -1820,6 +1891,7 @@ function startPan(e){ S.drag = {mode:'pan', sx:e.clientX, sy:e.clientY, ox:S.ox,
 
 function onMove(e){
   if (!S.doc) return;
+  if (e.pointerType === 'touch' && S.penDown && !e._synthetic) return;   // ignore the palm while the Pencil is drawing
   if (S.pointers.has(e.pointerId)) S.pointers.set(e.pointerId, [e.clientX, e.clientY]);
   if (!e._synthetic) S.lastMove = {clientX:e.clientX, clientY:e.clientY, pointerId:e.pointerId, pointerType:e.pointerType, buttons:e.buttons, shiftKey:e.shiftKey};
   if (S.tool === 'symbols' && e.pointerType !== 'touch'){ S.hover = toPage(e); render(); }
@@ -1888,17 +1960,42 @@ function onMove(e){
   }
   if (SNAP_TOOLS.has(S.tool)) p = snapPt(p);
   const anchor = d.pts[d.pts.length-2];
-  if (['rect','ellipse','cloud','hlbox','whiteout'].includes(d.type) || d._tool === 'movearea'){ if (e.shiftKey) p = constrainSquare(anchor, p); }
+  if (['rect','ellipse','cloud','hlbox','whiteout'].includes(d.type) || d._tool === 'movearea'){ if (e.shiftKey || S.squareLock) p = constrainSquare(anchor, p); }
   else p = angleLock(anchor, p, e);
   d.pts[d.pts.length-1] = p; render();
 }
 
+/* Adds a point to a polyline tool (pipe, run, area, polygon). A quick second tap/click on the same spot finishes it. */
+function addClickPoint(p, e){
+  const t = S.tool; if (!CLICK_TOOLS.has(t)) return;
+  let q = SNAP_TOOLS.has(t) ? snapPt(p) : p;
+  const now = performance.now(), last = S.lastClick; S.lastClick = {time:now, xy:[e.clientX, e.clientY]};
+  if (!S.drawing){
+    const style = {...S.styles[toolType(t) || t] || {}};
+    S.drawing = {id:uid(), type:t, pts:[q, q.slice()], style, _tool:t, _live:true}; render(); return;
+  }
+  const d = S.drawing, fp = d.pts[0];
+  if (last && now - last.time < 380 && Math.hypot(e.clientX - last.xy[0], e.clientY - last.xy[1]) < 14){ S.lastClick = null; finishClickShape(); return; }
+  if (d.pts.length > 3 && dist(q, fp) < 1e-6 && t !== 'run'){ d.pts.pop(); finishClickShape(); return; }
+  q = angleLock(d.pts[d.pts.length-2], q, e);
+  d.pts[d.pts.length-1] = q; d.pts.push(q.slice()); render();
+}
+function checkDoubleTap(e){
+  const now = performance.now(), last = S.lastTap; S.lastTap = {time:now, xy:[e.clientX, e.clientY]};
+  if (last && now - last.time < 350 && Math.hypot(e.clientX - last.xy[0], e.clientY - last.xy[1]) < 20){ S.lastTap = null; onDbl(e); }
+}
 function onUp(e){
-  S.pointers.delete(e.pointerId);
-  if (S.pinch){ if (S.pointers.size < 2) S.pinch = null; return; }
+  if (!S.pointers.delete(e.pointerId)) return;   // a touch we ignored (e.g. a palm while the Pencil is down)
+  if (e.pointerType === 'pen') S.penDown = false;
+  if (S.pinch){ if (S.pointers.size < 2) S.pinch = null; S.pendingClick = null; return; }
   if (!S.doc) return;
+  if (S.pendingClick && S.pendingClick.id === e.pointerId){ S.pendingClick = null; addClickPoint(toPage(e), e); return; }
   const dr = S.drag; S.drag = null; view.classList.remove('panning');
-  if (dr){ if (['move','handle','rotate'].includes(dr.mode) && dr.moved){ S.snap = null; markDirty(); updateProps(); } return; }
+  if (dr){
+    if (['move','handle','rotate'].includes(dr.mode) && dr.moved){ S.snap = null; markDirty(); updateProps(); }
+    else if (e.pointerType !== 'mouse' && (dr.mode === 'move' || dr.mode === 'pan')) checkDoubleTap(e);   // double-tap to edit text on touch screens
+    return;
+  }
   const d = S.drawing; if (!d) return;
   const page = cur();
   if (FREE_TOOLS.has(d.type)){
@@ -1951,13 +2048,52 @@ function onDbl(e){
 function onWheel(e){
   if (!S.doc) return;
   // Panels and boxes floating over the drawing scroll normally instead of zooming it
-  if (e.target !== canvas && e.target.closest && e.target.closest('#symPanel, #updateBar, .text-editor, #welcome')) return;
+  if (e.target !== canvas && e.target.closest && e.target.closest('#symPanel, #touchBar, #updateBar, .text-editor, #welcome')) return;
   e.preventDefault();
   const r = canvas.getBoundingClientRect();
   if (e.ctrlKey || e.metaKey || e.deltaX === 0 && !e.shiftKey){
     const dy = e.deltaMode === 1 ? e.deltaY*33 : e.deltaY;
     zoomAt(Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
   } else { S.ox -= e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX; S.oy -= e.shiftKey ? 0 : e.deltaY; render(); }
+}
+
+/* ---------- Touch screens and Apple Pencil ---------- */
+const BOX_TOOLS = new Set(['rect','ellipse','cloud','hlbox','whiteout','movearea']);
+function enableTouchUI(){ if (S.touchUI) return; S.touchUI = true; document.body.classList.add('touch-ui'); render(); }
+function noteInput(e){
+  S.ptrType = e.pointerType;
+  if (e.pointerType === 'touch' || e.pointerType === 'pen') enableTouchUI();
+  if (e.pointerType === 'pen' && !S.penSeen){
+    S.penSeen = true; S.pencilOnly = settings.pencilOnly !== false;
+    if (S.pencilOnly) toast('✎ Pencil detected – the Pencil draws, fingers pan and zoom. Switch this with “Pencil only” in the touch bar.', 6500, 'ok');
+  }
+}
+let tbState = '';
+function updateTouchBar(){
+  if (!S.touchUI) return;
+  const tb = $('#touchBar'), d = S.drawing, sel = getSel();
+  const vis = {
+    undo: !!S.doc, redo: !!S.doc && S.redo.length > 0,
+    finish: !!(d && CLICK_TOOLS.has(d.type) && d.pts.length > 2), cancel: !!d,
+    free: !!S.doc && (LINE_TYPES.has(S.tool) || !!(sel && LINE_TYPES.has(sel.type))),
+    square: !!S.doc && BOX_TOOLS.has(S.tool), delete: !!sel, pencil: !!S.penSeen,
+  };
+  const key = JSON.stringify([vis, !!S.freeAngle, !!S.squareLock, !!S.pencilOnly, !!S.doc]);
+  if (key === tbState) return; tbState = key;
+  tb.hidden = !S.doc;
+  Object.entries(vis).forEach(([k, v]) => { tb.querySelector(`[data-tb="${k}"]`).hidden = !v; });
+  [['free', S.freeAngle], ['square', S.squareLock], ['pencil', S.pencilOnly]].forEach(([k, on]) => { const b = tb.querySelector(`[data-tb="${k}"]`); b.classList.toggle('on', !!on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+}
+function touchBarAction(k){
+  if (k === 'undo') undo();
+  else if (k === 'redo') redo();
+  else if (k === 'finish') finishClickShape();
+  else if (k === 'cancel') cancelDrawing();
+  else if (k === 'free'){ S.freeAngle = !S.freeAngle; toast(S.freeAngle ? 'Free angle on – lines follow your finger exactly.' : 'Lines snap to 0° / 45° / 90° again.', 2500); }
+  else if (k === 'square'){ S.squareLock = !S.squareLock; }
+  else if (k === 'delete') deleteSel();
+  else if (k === 'pencil'){ S.pencilOnly = !S.pencilOnly; settings.pencilOnly = S.pencilOnly; saveSettings(); toast(S.pencilOnly ? 'Pencil only: the Pencil draws, fingers pan and zoom.' : 'Fingers draw as well as the Pencil.', 3000); }
+  render();
 }
 
 /* ---------- Move part of drawing ---------- */
@@ -2178,7 +2314,7 @@ function updateThumbCounts(){ if (!S.doc) return; S.doc.pages.forEach((p, i) => 
 function gotoPage(i){
   if (!S.doc || i < 0 || i >= S.doc.pages.length) return;
   commitEditor(); cancelDrawing();
-  S.doc.pages.forEach((p, j) => { if (j !== i) { p.bg = null; } });
+  S.doc.pages.forEach((p, j) => { if (j !== i && p.bg){ p.bg.width = 0; p.bg = null; } });
   S.cur = i; S.sel = null; fitPage(); updateAll();
 }
 async function rotatePage(){
@@ -2287,7 +2423,7 @@ function openSaveDialog(){
       <button class="save-opt" data-sv="jpg"><b>JPEG image</b><small>This page, smaller file</small></button>
       <button class="save-opt" data-sv="csv"><b>Schedule (CSV)</b><small>Every markup and measurement, for Excel</small></button>
     </div>
-    <p class="muted" style="margin:0">Files go to your Downloads folder. If your browser asks where to save or to confirm, accept it.</p>`,
+    <p class="muted" style="margin:0">${IS_IOS ? 'On iPad and iPhone you choose where it goes (Save to Files, Mail, Teams…) from the Share sheet.' : 'Files go to your Downloads folder. If your browser asks where to save or to confirm, accept it.'}</p>`,
     [{label:'Close', fn: () => true}],
     () => {
       const upd = () => { $('#svFile').textContent = baseName() + '.…'; };
@@ -2766,6 +2902,10 @@ function init(){
   $('#updNow').onclick = applyUpdate;
   $('#updLater').onclick = () => { $('#updateBar').hidden = true; setTimeout(() => { PWA.found = false; }, 2*60*60*1000); };
   setupPWA(); setupLaunchQueue();
+  $('#touchBar').addEventListener('click', e => { const b = e.target.closest('[data-tb]'); if (b) touchBarAction(b.dataset.tb); });
+  canvas.addEventListener('pointerup', () => { if (editor && document.activeElement !== editor.ta) editor.ta.focus({preventScroll:true}); });   // iOS opens the keyboard only from a tap
+  document.addEventListener('gesturestart', e => e.preventDefault());   // stop Safari zooming the whole page on pinch
+  if (window.matchMedia && matchMedia('(pointer: coarse)').matches) enableTouchUI();
   setTool('select'); updateAll();
 }
 init();
