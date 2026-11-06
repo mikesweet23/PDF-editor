@@ -30,6 +30,18 @@ When ADI Markup is served over https, for example with GitHub Pages (**Settings 
 
 `icons/` holds the app icon: SVG source, 192/512 PNG, a maskable 512 PNG for Android, an Apple touch icon and `favicon.ico`. The favicon is also embedded in `index.html`, so it shows even when the file is opened straight from the desktop.
 
+## iPad, Apple Pencil and iPhone
+
+Open the web address in Safari and use **Share → Add to Home Screen** to install it like an app (it updates itself the same way).
+
+- **Touch bar:** a floating bar appears on touch screens with **Undo / Redo**, **Finish** (for pipes, runs, areas and polygons), **Cancel**, **Free angle** (the on-screen version of holding Alt), **Square** (the on-screen version of Shift) and **Delete**.
+- **Apple Pencil:** when you first use the Pencil, **Pencil only** switches on. The Pencil draws, one finger pans and two fingers pinch to zoom. A palm resting on the screen while you draw is ignored. Turn it off in the touch bar so fingers can draw too.
+- **Gestures:** pinch to zoom and two-finger drag to pan work in the middle of drawing a pipe without losing it. Double-tap to finish a pipe or run, or to edit text.
+- **Bigger targets:** handles, rotate grip and buttons are larger on touch screens, and taps are more forgiving.
+- **Saving:** on iPad and iPhone a **Share / Save** button opens the iOS Share sheet: Save to Files, Mail, Teams, OneDrive and so on.
+- **Large drawings:** rendering stays within iOS limits (about 16 megapixels per image), so big A1/A0 sheets and exports don't come out blank.
+- **iPhone layout:** tools run along the bottom, the side panel slides in as a drawer, and the HVAC symbols open as a bottom sheet. On a phone, Export lives inside **Save**.
+
 ## Features
 
 | Area | What you can do |
