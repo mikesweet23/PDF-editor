@@ -9,6 +9,27 @@ It is a single file, `index.html`, that runs in the browser (Chrome or Edge reco
 - **Run locally:** double-click `index.html`.
 - **Host for the team:** put `index.html` on any web server, SharePoint or Teams site, or GitHub Pages (Settings → Pages → deploy from branch).
 
+## Install as an app (PWA)
+
+When ADI Markup is served over https, for example with GitHub Pages (**Settings → Pages → Deploy from branch → `main` / root**), it can be installed like a desktop program:
+
+- **Chrome / Edge (Windows, Mac):** click the install icon at the right of the address bar, or **⋮ → Save and share → Install page as app**. It gets its own window, a desktop/Start-menu icon, and appears under **Open with** for PDF, PNG, JPEG and TIFF files.
+- **iPhone / iPad:** Share → **Add to Home Screen**. **Android:** ⋮ → **Install app**.
+
+### Updates – nothing goes stale
+
+- The installed app always loads the **latest published version** when online. The stored copy is used only offline, or when the network takes longer than 5 seconds.
+- A running app checks for a new version every 30 minutes and whenever its window is brought back into view.
+- **No drawing open:** it updates itself straight away.
+- **Drawing open:** an **Update available** box appears. **Update now** saves the drawing, reloads into the new version and reopens it; **Later** asks again in 2 hours.
+- **Settings → App updates → Check now** checks on demand.
+- When publishing, push `index.html` to `main`. Nothing else needs changing: updates are detected from the file itself.
+- Bump `CACHE` in `sw.js` only if you add new core files that must work offline.
+
+### Icons
+
+`icons/` holds the app icon: SVG source, 192/512 PNG, a maskable 512 PNG for Android, an Apple touch icon and `favicon.ico`. The favicon is also embedded in `index.html`, so it shows even when the file is opened straight from the desktop.
+
 ## Features
 
 | Area | What you can do |
