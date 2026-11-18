@@ -34,10 +34,11 @@ When ADI Markup is served over https, for example with GitHub Pages (**Settings 
 
 Open the web address in Safari and use **Share → Add to Home Screen** to install it like an app (it updates itself the same way).
 
+- **Select many, Copy and Paste:** **Select many** in the touch bar lets you tap markups to add them to the selection, or drag on empty space to box-select. **Copy** and **Paste** work on the whole selection. Pasted HVAC symbols get the next free tag numbers.
 - **Touch bar:** a floating bar appears on touch screens with **Undo / Redo**, **Finish** (for pipes, runs, areas and polygons), **Cancel**, **Free angle** (the on-screen version of holding Alt), **Square** (the on-screen version of Shift) and **Delete**.
 - **Apple Pencil:** when you first use the Pencil, **Pencil only** switches on. The Pencil draws, one finger pans and two fingers pinch to zoom. A palm resting on the screen while you draw is ignored. Turn it off in the touch bar so fingers can draw too.
 - **Gestures:** pinch to zoom and two-finger drag to pan work in the middle of drawing a pipe without losing it. Double-tap to finish a pipe or run, or to edit text.
-- **Line width, text size and symbol size:** the − and + buttons step one size at a time (line: 0.25, 0.5, 0.75, 1…; text: 1, 1.5, 2…; symbols: 10%, 15%, 20%…), and the box next to them takes any exact value. The sliders snap to the same sizes.
+- **Line width, text size and symbol size:** the − and + buttons step one size at a time (line: 0.25, 0.5, 0.75, 1…; text: 1, 1.5, 2…; symbols: 10%, 15%, 20%…), and the box next to them takes any exact value. The sliders snap to the same sizes. Select a placed HVAC symbol to resize it the same way with **Symbol size** in the bar above.
 - **Bigger targets:** handles, rotate grip and buttons are larger on touch screens, and taps are more forgiving.
 - **Saving:** on iPad and iPhone a **Share / Save** button opens the iOS Share sheet: Save to Files, Mail, Teams, OneDrive and so on.
 - **Large drawings:** rendering stays within iOS limits (about 16 megapixels per image), so big A1/A0 sheets and exports don't come out blank.
@@ -93,8 +94,12 @@ Open the web address in Safari and use **Share → Add to Home Screen** to insta
 |---|---|
 | Ctrl+Z / Ctrl+Y | Undo / redo |
 | Ctrl+S | Save (Ctrl+Shift+S to save as) |
-| Ctrl+D | Duplicate the selected markup |
-| Ctrl+C / Ctrl+V | Copy and paste markups (works across pages) |
+| Ctrl+D | Duplicate the selected markups |
+| Ctrl+C / Ctrl+V | Copy and paste markups, one or many (works across pages). With the mouse over the drawing, Ctrl+V pastes where the pointer is |
+| Ctrl+X | Cut the selected markups |
+| Ctrl+A | Select every markup on the page |
+| Shift+click | Add a markup to the selection, or take it out |
+| Shift+drag | Box-select: drag right for markups fully inside the box, drag left for anything the box touches |
 | Del | Delete the selected markup |
 | Arrow keys | Nudge the selected markup |
 | `[` / `]` | Rotate the selected markup 15° (with Shift: 90°) |

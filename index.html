@@ -84,7 +84,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 .rv{min-width:2.6em;font-variant-numeric:tabular-nums;color:var(--text);font-size:12px}
 .lw-btn{width:24px;height:24px;border:1px solid var(--border);border-radius:6px;background:var(--field);color:var(--text);font-size:16px;line-height:1;padding:0;cursor:pointer;touch-action:manipulation}
 .lw-btn:hover{border-color:var(--accent)}
-.prop input#pLw,.prop input#pFs{width:100px}
+.prop input#pLw,.prop input#pFs,.prop input#pSym{width:100px}
 .sym-row input#symSize{min-width:60px}
 .size-num{width:52px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--field);color:var(--text);font-variant-numeric:tabular-nums}
 @media (pointer:coarse){.lw-btn{width:36px;height:36px;font-size:20px}.size-num{width:64px;padding:7px 6px}}
@@ -345,6 +345,7 @@ body.touch-ui .sym-btn{min-height:80px}
   <label class="prop" data-p="pgap">Gap <select id="pGap"><option value="5">Tight</option><option value="8">Normal</option><option value="12">Wide</option><option value="18">Extra wide</option></select></label>
   <label class="prop" data-p="psize">Size <input type="text" id="pSize" size="7" maxlength="16" placeholder="e.g. 28mm"></label>
   <label class="prop" data-p="note">Note <input type="text" id="pNote" size="44" maxlength="400" placeholder="Note shown at the bottom of the schedule"></label>
+  <div class="prop" data-p="symscale">Symbol size <button type="button" class="lw-btn" id="pSymDown" title="Smaller symbol" aria-label="Smaller symbol">−</button><input type="range" id="pSym" aria-label="Symbol size"><button type="button" class="lw-btn" id="pSymUp" title="Bigger symbol" aria-label="Bigger symbol">+</button><input type="number" class="size-num" id="pSymNum" step="5" title="Type an exact symbol size" aria-label="Symbol size value"><span>%</span></div>
   <label class="prop" data-p="tag">Tag <input type="text" id="pTag" size="8" maxlength="24" placeholder="e.g. V1, 25mm"></label>
   <label class="prop" data-p="rev">Rev tag <input type="text" id="pRev" size="3" maxlength="4"></label>
   <div class="prop" data-p="sig"><div class="sigs" id="sigList"></div><button class="pbtn" id="sigNew">+ New signature</button><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="sigDate"> Add “Signed” date</label></div>
@@ -354,8 +355,10 @@ body.touch-ui .sym-btn{min-height:80px}
   </span>
   <span id="propHint"></span>
   <div class="spacer"></div>
+  <span class="prop" data-p="paste"><button class="pbtn" id="btnPaste" title="Paste (Ctrl+V). With the mouse over the drawing, Ctrl+V pastes where the pointer is.">Paste</button></span>
   <span class="prop" data-p="selActions">
     <button class="pbtn" id="btnFront" title="Bring to front">Front</button>
+    <button class="pbtn" id="btnCopy" title="Copy (Ctrl+C)">Copy</button>
     <button class="pbtn" id="btnDup" title="Duplicate (Ctrl+D)">Duplicate</button>
     <button class="pbtn danger" id="btnDel" title="Delete (Del)">Delete</button>
   </span>
@@ -370,6 +373,9 @@ body.touch-ui .sym-btn{min-height:80px}
     <button data-tb="cancel" title="Cancel what you are drawing">✕ Cancel</button>
     <button data-tb="free" aria-pressed="false" title="Draw lines at any angle (like holding Alt)">∠ Free angle</button>
     <button data-tb="square" aria-pressed="false" title="Draw squares and circles (like holding Shift)">□ Square</button>
+    <button data-tb="many" aria-pressed="false" title="Tap markups to add them to the selection; drag on empty space to box-select">☐ Select many</button>
+    <button data-tb="copy" title="Copy the selected markups">⧉ Copy</button>
+    <button data-tb="paste" title="Paste copied markups">📋 Paste</button>
     <button data-tb="delete" class="tb-danger" title="Delete the selected markup">Delete</button>
     <button data-tb="pencil" aria-pressed="false" title="Only the Pencil draws; fingers pan and zoom">✎ Pencil only</button>
   </div>
@@ -544,7 +550,7 @@ const TOOLS = [
 const typeName = a => a.type === 'pipe' ? 'Pipe – ' + ((SERVICE_BY_ID[a.style.svc] || {}).n || 'service') : a.sig ? 'Signature' : a.type === 'sym' ? ((SYM_BY_ID[a.sym] || {}).n || 'HVAC symbol') : (TYPE_NAME[a.type] || a.type);
 const TYPE_NAME = {eraser:'Eraser', pipe:'Pipe service line', signature:'Sign', symbols:'HVAC symbols', sym:'HVAC symbol', schedule:'Valve & component schedule', line:'Line',arrow:'Arrow',rect:'Rectangle',ellipse:'Ellipse',polygon:'Polygon',pen:'Freehand',cloud:'Cloud markup',text:'Text',callout:'Callout',stamp:'Stamp',image:'Image',legend:'Colour key',marker:'Highlighter',hlbox:'Highlight box',whiteout:'White-out',patch:'Moved area',measure:'Length',run:'Run length',area:'Area',calibrate:'Set scale',movearea:'Move part of drawing',select:'Select',pan:'Pan'};
 const HINTS = {
-  select:'Click a markup to select it. Drag to move, drag white handles to reshape, double-click text to edit. Drag empty space to pan.',
+  select:'Click a markup to select it. Shift+click to select several, Shift+drag to box-select, Ctrl+A for all. Ctrl+C / Ctrl+V to copy and paste. Drag empty space to pan.',
   pan:'Drag to move around. Mouse wheel zooms. Tip: hold Space with any tool to pan.',
   line:'Drag to draw. Snaps to 0° / 45° / 90° – hold Alt for any angle.', arrow:'Drag from tail to tip. Snaps to 0° / 45° / 90° – hold Alt for any angle.',
   rect:'Drag to draw. Hold Shift for a square.', ellipse:'Drag to draw. Hold Shift for a circle.',
@@ -603,6 +609,10 @@ const S = {
   undo:[], redo:[], dirty:false, fileHandle:null, clip:null,
   imgCache:{}, pointers:new Map(), pinch:null,
 };
+/* Multi-selection: S.multi holds the ids when two or more markups are selected (S.sel is then null).
+   Setting S.sel (to anything) always ends a multi-selection. */
+S.multi = [];
+(() => { let v = S.sel; delete S.sel; Object.defineProperty(S, 'sel', {get(){ return v; }, set(x){ v = x; S.multi = []; }, enumerable:true, configurable:true}); })();
 const view = $('#view'), canvas = $('#stage'), ctx = canvas.getContext('2d');
 /* iPad/iPhone browsers refuse canvases larger than ~16.7 million pixels, so render smaller there. */
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -614,6 +624,19 @@ const PW = p => p.rot % 180 ? p.h : p.w;
 const PH = p => p.rot % 180 ? p.w : p.h;
 const unitOf = p => Math.max(p.w, p.h) / 1500;
 const getSel = () => { const p = cur(); return p && S.sel ? p.anns.find(a => a.id === S.sel) || null : null; };
+const selIds = () => S.multi.length ? S.multi.slice() : (S.sel ? [S.sel] : []);
+const selAnns = () => { const p = cur(); if (!p) return []; const ids = new Set(selIds()); return p.anns.filter(a => ids.has(a.id)); };
+const multiOn = () => S.multi.length > 1;
+function setSelection(ids){
+  ids = [...new Set(ids)];
+  if (ids.length <= 1) S.sel = ids[0] || null; else { S.sel = null; S.multi = ids; }
+  updateProps(); renderMarkupList(); render();
+}
+// a markup's outline on the page, allowing for rotation
+function annWorldBox(a){
+  const cs = boxPts(annBBox(a)).map(q => toWorld(a, q)), xs = cs.map(q => q[0]), ys = cs.map(q => q[1]);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
 
 /* ---------- Geometry ---------- */
 const dist = (a, b) => Math.hypot(b[0]-a[0], b[1]-a[1]);
@@ -1464,6 +1487,20 @@ function draw(){
     ctx.save(); ctx.beginPath(); cs.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath();
     ctx.fillStyle = 'rgba(0,150,214,0.10)'; ctx.fill(); ctx.strokeStyle = '#0096d6'; ctx.lineWidth = 1.5/z; ctx.setLineDash([4/z, 3/z]); ctx.stroke(); ctx.restore();
   }
+  // multi-selection and selection box
+  if (multiOn()){
+    const pad = 4/z;
+    ctx.save(); ctx.strokeStyle = '#0096d6'; ctx.lineWidth = 1.5/z; ctx.setLineDash([5/z, 4/z]);
+    for (const a of selAnns()){ const b = annBBox(a); ctx.save(); applyRot(ctx, a); ctx.strokeRect(b[0]-pad, b[1]-pad, b[2]+pad*2, b[3]+pad*2); ctx.restore(); }
+    ctx.restore();
+  }
+  if (S.drag && S.drag.mode === 'marquee'){
+    const {start:a, end:b} = S.drag, cross = b[0] < a[0];
+    ctx.save(); ctx.lineWidth = 1.2/z; ctx.setLineDash(cross ? [6/z, 4/z] : []);
+    ctx.strokeStyle = cross ? '#2e7d32' : '#0096d6'; ctx.fillStyle = cross ? 'rgba(46,125,50,0.08)' : 'rgba(0,150,214,0.08)';
+    const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]), w = Math.abs(b[0]-a[0]), h = Math.abs(b[1]-a[1]);
+    ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.restore();
+  }
   // selection
   const sel = getSel();
   if (sel){
@@ -1956,8 +1993,9 @@ function onDown(e){
   const page = cur(), t = S.tool;
 
   if (t === 'select'){
+    const add = e.shiftKey || e.ctrlKey || e.metaKey || S.multiMode;
     const sel = getSel();
-    if (sel){
+    if (sel && !add){
       if (!NO_ROTATE.has(sel.type) && dist(p, rotHandle(sel).p) <= tolPx()*1.6){
         const bb = annBBox(sel), center = ROT_TYPES.has(sel.type) ? rotCenter(sel) : [bb[0]+bb[2]/2, bb[1]+bb[3]/2];
         S.drag = {mode:'rotate', a:sel, center, startAng: Math.atan2(p[1]-center[1], p[0]-center[0]), startRot: ROT_TYPES.has(sel.type) ? (sel.rot || 0) : 0, startPts: JSON.parse(JSON.stringify(sel.pts)), moved:false};
@@ -1967,8 +2005,19 @@ function onDown(e){
       if (hp >= 0){ S.drag = {mode:'handle', a:sel, i:hp, start:p, moved:false}; return; }
     }
     const hit = [...page.anns].reverse().find(a => hitAnn(a, p, tolPx()));
+    if (add){   // Shift / Ctrl+click adds or removes; drag on empty space draws a selection box
+      if (hit){
+        const ids = selIds(), i = ids.indexOf(hit.id);
+        if (i >= 0) ids.splice(i, 1); else ids.push(hit.id);
+        setSelection(ids);
+        if (i < 0) S.drag = {mode:'moveMany', ids:selIds(), last:p, moved:false};
+        return;
+      }
+      S.drag = {mode:'marquee', start:p, end:p, base:selIds()}; return;
+    }
+    if (hit && multiOn() && S.multi.includes(hit.id)){ S.drag = {mode:'moveMany', ids:S.multi.slice(), last:p, moved:false}; return; }
     if (hit){ S.sel = hit.id; S.drag = {mode:'move', a:hit, last:p, moved:false}; updateProps(); renderMarkupList(); render(); return; }
-    if (S.sel){ S.sel = null; updateProps(); renderMarkupList(); render(); }
+    if (S.sel || S.multi.length){ S.sel = null; updateProps(); renderMarkupList(); render(); }
     startPan(e); return;
   }
   let q = SNAP_TOOLS.has(t) ? snapPt(p) : p;
@@ -2163,6 +2212,14 @@ function onMove(e){
       dr.a.pts.forEach(q => { q[0] += dx; q[1] += dy; });
       dr.last = p; render(); return;
     }
+    if (dr.mode === 'moveMany'){
+      const dx = p[0] - dr.last[0], dy = p[1] - dr.last[1];
+      if (!dr.moved){ if (Math.hypot(dx, dy)*S.zoom < 2) return; checkpoint(); dr.moved = true; }
+      const ids = new Set(dr.ids);
+      cur().anns.forEach(a => { if (ids.has(a.id)) a.pts.forEach(q => { q[0] += dx; q[1] += dy; }); });
+      dr.last = p; render(); return;
+    }
+    if (dr.mode === 'marquee'){ dr.end = p; render(); return; }
     if (dr.mode === 'rotate'){
       if (!dr.moved){ checkpoint(); dr.moved = true; }
       let total = dr.startRot + Math.atan2(p[1]-dr.center[1], p[0]-dr.center[0]) - dr.startAng;
@@ -2243,7 +2300,8 @@ function onUp(e){
   if (S.pendingClick && S.pendingClick.id === e.pointerId){ S.pendingClick = null; addClickPoint(toPage(e), e); return; }
   const dr = S.drag; S.drag = null; view.classList.remove('panning');
   if (dr){
-    if (['move','handle','rotate'].includes(dr.mode) && dr.moved){ S.snap = null; markDirty(); updateProps(); }
+    if (dr.mode === 'marquee'){ finishMarquee(dr); return; }
+    if (['move','handle','rotate','moveMany'].includes(dr.mode) && dr.moved){ S.snap = null; markDirty(); updateProps(); }
     else if (e.pointerType !== 'mouse' && (dr.mode === 'move' || dr.mode === 'pan')) checkDoubleTap(e);   // double-tap to edit text on touch screens
     return;
   }
@@ -2329,13 +2387,14 @@ function updateTouchBar(){
     undo: !!S.doc, redo: !!S.doc && S.redo.length > 0,
     finish: !!(d && CLICK_TOOLS.has(d.type) && d.pts.length > 2), cancel: !!d,
     free: !!S.doc && (LINE_TYPES.has(S.tool) || !!(sel && LINE_TYPES.has(sel.type))),
-    square: !!S.doc && BOX_TOOLS.has(S.tool), delete: !!sel, pencil: !!S.penSeen,
+    square: !!S.doc && BOX_TOOLS.has(S.tool), delete: !!sel || multiOn(), pencil: !!S.penSeen,
+    many: !!S.doc && S.tool === 'select', copy: !!sel || multiOn(), paste: !!S.doc && !!S.clip,
   };
-  const key = JSON.stringify([vis, !!S.freeAngle, !!S.squareLock, !!S.pencilOnly, !!S.doc]);
+  const key = JSON.stringify([vis, !!S.freeAngle, !!S.squareLock, !!S.pencilOnly, !!S.multiMode, !!S.doc]);
   if (key === tbState) return; tbState = key;
   tb.hidden = !S.doc;
   Object.entries(vis).forEach(([k, v]) => { tb.querySelector(`[data-tb="${k}"]`).hidden = !v; });
-  [['free', S.freeAngle], ['square', S.squareLock], ['pencil', S.pencilOnly]].forEach(([k, on]) => { const b = tb.querySelector(`[data-tb="${k}"]`); b.classList.toggle('on', !!on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  [['free', S.freeAngle], ['square', S.squareLock], ['pencil', S.pencilOnly], ['many', S.multiMode]].forEach(([k, on]) => { const b = tb.querySelector(`[data-tb="${k}"]`); b.classList.toggle('on', !!on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
 }
 function touchBarAction(k){
   if (k === 'undo') undo();
@@ -2345,6 +2404,9 @@ function touchBarAction(k){
   else if (k === 'free'){ S.freeAngle = !S.freeAngle; toast(S.freeAngle ? 'Free angle on – lines follow your finger exactly.' : 'Lines snap to 0° / 45° / 90° again.', 2500); }
   else if (k === 'square'){ S.squareLock = !S.squareLock; }
   else if (k === 'delete') deleteSel();
+  else if (k === 'copy') copySel();
+  else if (k === 'paste') pasteClip(null);
+  else if (k === 'many'){ S.multiMode = !S.multiMode; toast(S.multiMode ? 'Select many: tap markups to add or remove them, or drag on empty space to draw a box round them. Two fingers still pan.' : 'Select many off.', 4000); }
   else if (k === 'pencil'){ S.pencilOnly = !S.pencilOnly; settings.pencilOnly = S.pencilOnly; saveSettings(); toast(S.pencilOnly ? 'Pencil only: the Pencil draws, fingers pan and zoom.' : 'Fingers draw as well as the Pencil.', 3000); }
   render();
 }
@@ -2427,13 +2489,15 @@ function currentStyleTarget(){
 }
 function updateProps(){
   const t = currentStyleTarget(), sel = getSel();
-  $('#propTitle').textContent = sel ? typeName(sel) : (TYPE_NAME[S.tool] || '');
+  $('#propTitle').textContent = multiOn() ? selAnns().length + ' markups selected' : sel ? typeName(sel) : (TYPE_NAME[S.tool] || '');
   const show = new Set(t ? PROPS[t.type] || [] : []);
-  if (sel) show.add('selActions');
+  if (sel || multiOn()) show.add('selActions');
+  if (S.clip && S.doc) show.add('paste');
   if (show.has('sig')) renderSigList();
   if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
   if (sel && sel.type === 'schedule' && document.activeElement !== $('#pNote')) $('#pNote').value = sel.note ?? DEFAULT_SCHED_NOTE;
   if (!sel && t && t.type === 'pipe'){ show.add('pair'); if (S.styles.pipe.pair) show.add('pgap'); $('#pPair').value = S.styles.pipe.pair || ''; $('#pGap').value = String(S.styles.pipe.gap || 8); }
+  if (sel && sel.type === 'sym'){ show.add('symscale'); if (symSelCtl) symSelCtl.show(symPct(sel)); }
   if (sel && sel.type === 'sym'){ show.add('tag'); if (document.activeElement !== $('#pTag')) $('#pTag').value = sel.tag || ''; }
   $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
   syncAngle();
@@ -2465,6 +2529,7 @@ function applyProp(key, val, final){
   if (final) propCheckpointed = false;
   const styleNow = sel ? sel.style : t.style;
   if (key === 'tag'){ if (sel) sel.tag = val; markDirty(); return; }
+  if (key === 'symscale'){ if (sel && sel.type === 'sym') setSymPct(sel, val); markDirty(); return; }
   if (key === 'note'){ if (sel) sel.note = val; markDirty(); return; }
   if (key === 'svc'){
     const sv = SERVICE_BY_ID[val] || SERVICES[0];
@@ -2518,12 +2583,20 @@ function steppedControl({id, steps, min, max, get, set}){
   return {show};
 }
 const styleNow = key => { const t = currentStyleTarget(), sel = getSel(); const st = sel ? sel.style : t && t.style; return st && st[key]; };
-let lwCtl = null, fsCtl = null;
+let lwCtl = null, fsCtl = null, symSelCtl = null;
+// a placed symbol's size as a % of the standard size; resizing keeps its pipe point (and rotation) where it is
+const symPct = a => Math.round(symScaleOrigin(a).k / (unitOf(cur())*22) * 1000) / 10;
+function setSymPct(a, pct){
+  const def = SYM_BY_ID[a.sym]; if (!def) return;
+  const {o} = symScaleOrigin(a), k = unitOf(cur())*22*pct/100, [x0,y0,x1,y1] = def.b;
+  a.pts = [[o[0] + x0*k, o[1] + y0*k], [o[0] + x1*k, o[1] + y1*k]];
+}
 function showLw(v){ if (lwCtl) lwCtl.show(v); }
 function showFs(v){ if (fsCtl) fsCtl.show(v); }
 function bindSizeControls(){
   lwCtl = steppedControl({id:'pLw', steps:LW_STEPS, min:0.1, max:50, get:() => styleNow('lw'), set:(v, f) => applyProp('lw', v, f)});
   fsCtl = steppedControl({id:'pFs', steps:FS_STEPS, min:0.5, max:120, get:() => styleNow('fs'), set:(v, f) => applyProp('fs', v, f)});
+  symSelCtl = steppedControl({id:'pSym', steps:SYM_STEPS, min:5, max:500, get:() => { const a = getSel(); return a && a.type === 'sym' ? symPct(a) : 0; }, set:(v, f) => applyProp('symscale', v, f)});
   const symCtl = steppedControl({id:'symSize', steps:SYM_STEPS, min:5, max:500, get:() => Math.round((S.symSize || 1)*100), set:v => { S.symSize = v/100; render(); }});
   symCtl.show(Math.round((S.symSize || 1)*100));
 }
@@ -2960,11 +3033,73 @@ function renderSymGrid(){
 function syncSymDir(){ const deg = Math.round((S.symRot || 0)*180/Math.PI); $$('[data-symdir]').forEach(b => b.classList.toggle('on', (+b.dataset.symdir === 0 && deg === 0) || (+b.dataset.symdir === 90 && Math.abs(deg) === 90))); }
 
 /* ---------- Selection actions ---------- */
-function deleteSel(){ const a = getSel(); if (!a) return; checkpoint(); if (a.type === 'schedule') cur().schedOff = true; cur().anns = cur().anns.filter(x => x !== a); S.sel = null; markDirty(); updateProps(); }
+function deleteSel(){
+  const list = selAnns(); if (!list.length) return; checkpoint();
+  if (list.some(a => a.type === 'schedule')) cur().schedOff = true;
+  const gone = new Set(list); cur().anns = cur().anns.filter(x => !gone.has(x)); S.sel = null; markDirty(); updateProps();
+}
 function cloneAnn(a, off){ const c = JSON.parse(JSON.stringify(a, strip)); c.id = uid(); c.pts = c.pts.map(p => [p[0]+off, p[1]+off]); return c; }
-function duplicateSel(){ const a = getSel(); if (!a) return; checkpoint(); const c = cloneAnn(a, unitOf(cur())*15); cur().anns.push(c); S.sel = c.id; markDirty(); updateProps(); }
-function bringFront(){ const a = getSel(); if (!a) return; checkpoint(); const p = cur(); p.anns = p.anns.filter(x => x !== a); p.anns.push(a); markDirty(); }
-function nudge(dx, dy){ const a = getSel(); if (!a) return; if (!S._nudging){ checkpoint(); S._nudging = true; } a.pts.forEach(q => { q[0] += dx; q[1] += dy; }); markDirty(); clearTimeout(S._nudgeT); S._nudgeT = setTimeout(() => S._nudging = false, 600); }
+function duplicateSel(){
+  const list = selAnns().filter(a => a.type !== 'schedule'); if (!list.length) return;
+  checkpoint(); const off = unitOf(cur())*15;
+  setSelection(placeCopies(list, off, off)); markDirty();
+}
+function bringFront(){ const list = selAnns(); if (!list.length) return; checkpoint(); const p = cur(), s = new Set(list); p.anns = p.anns.filter(x => !s.has(x)).concat(list); markDirty(); }
+function selectAll(){ if (S.tool !== 'select') setTool('select'); const p = cur(); if (!p) return; setSelection(p.anns.filter(a => !(a.type === 'schedule' && idsHidden())).map(a => a.id)); }
+function finishMarquee(dr){
+  const [a, b] = [dr.start, dr.end];
+  if (Math.hypot(b[0]-a[0], b[1]-a[1])*S.zoom < 4){ render(); return; }
+  // drag right: markups fully inside the box; drag left: anything the box touches (as in CAD)
+  const cross = b[0] < a[0], x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]);
+  const picked = cur().anns.filter(m => {
+    if (m.type === 'schedule' && idsHidden()) return false;
+    const [mx0, my0, mx1, my1] = annWorldBox(m);
+    return cross ? (mx0 <= x1 && mx1 >= x0 && my0 <= y1 && my1 >= y0) : (mx0 >= x0 && mx1 <= x1 && my0 >= y0 && my1 <= y1);
+  }).map(m => m.id);
+  setSelection(dr.base.concat(picked));
+}
+/* Copy / paste: the clipboard holds a list of markups and works across pages. */
+function copySel(cut){
+  const list = selAnns().filter(a => a.type !== 'schedule');
+  if (!list.length){ toast('The schedule can’t be copied.'); return; }
+  S.clip = JSON.stringify(list, strip);
+  // replace whatever is on the system clipboard so Ctrl+V pastes these markups, not an old image
+  try { navigator.clipboard && navigator.clipboard.writeText('ADI Markup: ' + list.length + ' markup' + (list.length > 1 ? 's' : '')).catch(() => {}); } catch (err) {}
+  if (cut) deleteSel(); else updateProps();
+  toast((cut ? 'Cut ' : 'Copied ') + list.length + ' markup' + (list.length > 1 ? 's' : '') + ' – Ctrl+V or Paste to paste (any page).', 2200);
+}
+function placeCopies(list, dx, dy){
+  const page = cur(), ids = [], auto = settings.autoTag !== false;
+  for (const a of list){
+    const c = JSON.parse(JSON.stringify(a, strip)); c.id = uid(); c.pts = c.pts.map(q => [q[0]+dx, q[1]+dy]);
+    if (c.type === 'sym' && c.tag && auto && SYM_PREFIX[c.sym] && new RegExp('^' + SYM_PREFIX[c.sym] + '\\d+$').test(c.tag)) c.tag = nextTag(SYM_PREFIX[c.sym]);
+    page.anns.push(c); ids.push(c.id);
+  }
+  if (list.some(a => a.type === 'sym') && ensureSchedule(page)) toast('Added a valve & component schedule to this page.', 4000, 'ok');
+  return ids;
+}
+function pasteClip(at){
+  if (!S.clip || !S.doc) return;
+  let list = JSON.parse(S.clip); if (!Array.isArray(list)) list = [list];
+  if (!list.length) return;
+  checkpoint();
+  let dx, dy;
+  if (at){   // centre the copies on the pointer
+    const bs = list.map(a => { try { return annWorldBox(a); } catch (err) { const xs = a.pts.map(q => q[0]), ys = a.pts.map(q => q[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; } });
+    const cx = (Math.min(...bs.map(b => b[0])) + Math.max(...bs.map(b => b[2])))/2, cy = (Math.min(...bs.map(b => b[1])) + Math.max(...bs.map(b => b[3])))/2;
+    dx = at[0] - cx; dy = at[1] - cy;
+  } else { dx = dy = unitOf(cur())*15; }
+  if (S.tool !== 'select') setTool('select');
+  const ids = placeCopies(list, dx, dy);
+  if (!at) S.clip = JSON.stringify(list.map(a => ({...a, pts:a.pts.map(q => [q[0]+dx, q[1]+dy])})));   // next paste steps on again
+  setSelection(ids); markDirty();
+}
+// page point under the mouse, if the mouse is over the drawing
+function pointerOnDrawing(){
+  if (!S.overCanvas || !S.lastMove || S.lastMove.pointerType !== 'mouse') return null;
+  return toPage(S.lastMove);
+}
+function nudge(dx, dy){ const list = selAnns(); if (!list.length) return; if (!S._nudging){ checkpoint(); S._nudging = true; } list.forEach(a => a.pts.forEach(q => { q[0] += dx; q[1] += dy; })); markDirty(); clearTimeout(S._nudgeT); S._nudgeT = setTimeout(() => S._nudging = false, 600); }
 
 /* ---------- Keyboard ---------- */
 const KEYMAP = {}; TOOLS.forEach(t => { if (t && t[1]) KEYMAP[t[1].toLowerCase()] = t[0]; });
@@ -2978,15 +3113,17 @@ document.addEventListener('keydown', e => {
   if (mod && k === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && k === 'y'){ e.preventDefault(); redo(); return; }
   if (mod && k === 'd'){ e.preventDefault(); duplicateSel(); return; }
-  if (mod && k === 'c'){ const a = getSel(); if (a){ S.clip = JSON.stringify(a, strip); toast('Copied – Ctrl+V to paste (any page).', 1500); } return; }
+  if (mod && k === 'c'){ if (selAnns().length){ e.preventDefault(); copySel(); } return; }
+  if (mod && k === 'x'){ if (selAnns().length){ e.preventDefault(); copySel(true); } return; }
+  if (mod && k === 'a'){ e.preventDefault(); selectAll(); return; }
   if (mod) return;
   if (e.key === ' '){ e.preventDefault(); if (!S.space){ S.space = true; view.classList.add('pan'); } return; }
-  if (e.key === 'Escape'){ if (S.drawing){ if (CLICK_TOOLS.has(S.drawing.type) && S.drawing.pts.length > 3) finishClickShape(); else cancelDrawing(); } else if (S.sel){ S.sel = null; updateProps(); renderMarkupList(); render(); } else setTool('select'); return; }
+  if (e.key === 'Escape'){ if (S.drawing){ if (CLICK_TOOLS.has(S.drawing.type) && S.drawing.pts.length > 3) finishClickShape(); else cancelDrawing(); } else if (S.sel || S.multi.length){ S.sel = null; updateProps(); renderMarkupList(); render(); } else setTool('select'); return; }
   if (e.key === 'Enter'){ if (S.drawing && CLICK_TOOLS.has(S.drawing.type)) finishClickShape(); else { const a = getSel(); if (a && (a.type === 'text' || a.type === 'callout')) { e.preventDefault(); editText(a, false); } } return; }
   if (e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); deleteSel(); return; }
   if (e.key === 'PageDown'){ e.preventDefault(); gotoPage(S.cur+1); return; }
   if (e.key === 'PageUp'){ e.preventDefault(); gotoPage(S.cur-1); return; }
-  if (e.key.startsWith('Arrow') && getSel()){ e.preventDefault(); const s = (e.shiftKey ? 10 : 1)/S.zoom; nudge(e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0, e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0); return; }
+  if (e.key.startsWith('Arrow') && selAnns().length){ e.preventDefault(); const s = (e.shiftKey ? 10 : 1)/S.zoom; nudge(e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0, e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0); return; }
   if (e.key === '+' || e.key === '='){ zoomCenter(1.25); return; }
   if (e.key === '-' || e.key === '_'){ zoomCenter(0.8); return; }
   if (e.key === '0'){ fitPage(); return; }
@@ -3007,7 +3144,7 @@ document.addEventListener('paste', async e => {
   if (!S.doc || modalEl || tag === 'input' || tag === 'textarea') return;
   const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => i.type.startsWith('image/'));
   if (item){ e.preventDefault(); insertImageFile(item.getAsFile()); return; }
-  if (S.clip){ e.preventDefault(); checkpoint(); const c = cloneAnn(JSON.parse(S.clip), unitOf(cur())*15); cur().anns.push(c); S.clip = JSON.stringify(c); setTool('select'); S.sel = c.id; markDirty(); updateProps(); }
+  if (S.clip){ e.preventDefault(); pasteClip(pointerOnDrawing()); }
 });
 
 /* ---------- Installable app (PWA): offline use, opening files, updates ----------
@@ -3079,6 +3216,8 @@ function init(){
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointercancel', onUp);
   canvas.addEventListener('dblclick', onDbl);
+  canvas.addEventListener('pointerenter', () => { S.overCanvas = true; });
+  canvas.addEventListener('pointerleave', () => { S.overCanvas = false; });
   canvas.addEventListener('pointerleave', () => { if (S.hover || S.hoverTxt){ S.hover = null; S.hoverTxt = null; render(); } });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   view.addEventListener('wheel', onWheel, {passive:false});
@@ -3123,7 +3262,7 @@ function init(){
   $$('[data-rot]').forEach(b => b.onclick = () => rotateSelBy(+b.dataset.rot));
   $('#pAngle').addEventListener('change', e => setSelAngle(parseFloat(e.target.value)));
   $('#pAngle').addEventListener('keydown', e => e.stopPropagation());
-  $('#btnDel').onclick = deleteSel; $('#btnDup').onclick = duplicateSel; $('#btnFront').onclick = bringFront;
+  $('#btnDel').onclick = deleteSel; $('#btnDup').onclick = duplicateSel; $('#btnCopy').onclick = () => copySel(); $('#btnPaste').onclick = () => pasteClip(null); $('#btnFront').onclick = bringFront;
   $('#sigNew').onclick = openSignatureModal;
   S.sym = 'iso'; S.symRot = 0; S.symSize = 1;
   $('#symGrid').addEventListener('click', e => { const b = e.target.closest('[data-sym]'); if (!b) return; S.sym = b.dataset.sym; $$('#symGrid .sym-btn').forEach(x => x.classList.toggle('on', x === b)); render(); });
