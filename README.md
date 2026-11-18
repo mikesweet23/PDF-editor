@@ -34,7 +34,7 @@ When ADI Markup is served over https, for example with GitHub Pages (**Settings 
 
 Open the web address in Safari and use **Share → Add to Home Screen** to install it like an app (it updates itself the same way).
 
-- **Select many, Copy and Paste:** **Select many** in the touch bar lets you tap markups to add them to the selection, or drag on empty space to box-select. **Copy** and **Paste** work on the whole selection. Pasted HVAC symbols get the next free tag numbers.
+- **Select many, Copy and Paste:** **Select many** in the touch bar lets you tap markups to add them to the selection, or drag on empty space to box-select. **Copy** and **Paste** work on the whole selection. With several markups selected, colour, line width, text size, symbol size and the other settings in the bar change all of them at once: − / + step each one from its own size, while the slider or a typed value sets them all to the same size. Pasted HVAC symbols get the next free tag numbers.
 - **Touch bar:** a floating bar appears on touch screens with **Undo / Redo**, **Finish** (for pipes, runs, areas and polygons), **Cancel**, **Free angle** (the on-screen version of holding Alt), **Square** (the on-screen version of Shift) and **Delete**.
 - **Apple Pencil:** when you first use the Pencil, **Pencil only** switches on. The Pencil draws, one finger pans and two fingers pinch to zoom. A palm resting on the screen while you draw is ignored. Turn it off in the touch bar so fingers can draw too.
 - **Gestures:** pinch to zoom and two-finger drag to pan work in the middle of drawing a pipe without losing it. Double-tap to finish a pipe or run, or to edit text.
