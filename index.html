@@ -325,12 +325,12 @@ body.touch-ui .sym-btn{min-height:80px}
 <div id="props">
   <span id="propTitle">Select</span>
   <div class="prop" data-p="color">Outline <div class="swatches" id="swatches"></div><input type="color" id="pColor" title="Custom colour"></div>
-  <label class="prop" data-p="lw">Line <input type="range" id="pLw" min="1" max="24" step="1"></label>
+  <label class="prop" data-p="lw">Line <input type="range" id="pLw" min="0.25" max="24" step="0.25"></label>
   <label class="prop" data-p="dash">Style <select id="pDash"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
   <div class="prop" data-p="fill">Fill <input type="color" id="pFillColor" title="Fill colour"><select id="pFill" title="Fill strength"><option value="none">No fill</option><option value="tint">Light</option><option value="half">Medium</option><option value="solid">Solid</option></select></div>
   <label class="prop" data-p="shape">Shape <select id="pShape"><option value="box">Box</option><option value="ellipse">Ellipse / circle</option></select></label>
   <label class="prop" data-p="tfill">Background <select id="pTFill"><option value="none">None</option><option value="white">White</option><option value="box">White + border</option></select></label>
-  <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="4" max="60" step="1"></label>
+  <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="1" max="60" step="0.5"></label>
   <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
   <label class="prop" data-p="svc">Service <select id="pSvc"></select></label>
@@ -374,7 +374,7 @@ body.touch-ui .sym-btn{min-height:80px}
       <label class="sym-check"><input type="checkbox" id="symAutoTag"><span>Number tags automatically (IV1, IV2, P1…)</span></label>
       <label class="sym-check"><input type="checkbox" id="symSched"><span>Add a valve &amp; component schedule to the drawing</span></label>
       <label class="sym-check"><input type="checkbox" id="symShowIds"><span>Show tags &amp; schedule (whole document)</span></label>
-      <div class="sym-row">Size <input type="range" id="symSize" min="40" max="300" step="10" value="100" aria-label="Symbol size"><span id="symSizeLbl">100%</span></div>
+      <div class="sym-row">Size <input type="range" id="symSize" min="10" max="300" step="5" value="100" aria-label="Symbol size"><span id="symSizeLbl">100%</span></div>
     </div>
     <div class="sym-scroll" id="symGrid"></div>
     <p class="sym-help">Pick a symbol, then click on the pipework to place it – keep clicking to add more. <b>[</b> <b>]</b> rotate, colours are in the bar above.</p>
@@ -1077,11 +1077,11 @@ function drawCloudNote(c, a, page){
   const s = st.shape === 'ellipse' ? 1/Math.hypot(dx/(bx[2]/2 || 1e-6), dy/(bx[3]/2 || 1e-6)) : Math.min(Math.abs((bx[2]/2)/(dx || 1e-9)), Math.abs((bx[3]/2)/(dy || 1e-9)));
   if (s < 1){
     const e = toWorld(a, [cx+dx*s, cy+dy*s]);
-    c.strokeStyle = c.fillStyle = st.color; c.lineWidth = Math.max(st.lw*u*0.7, u); c.lineCap = 'round';
+    c.strokeStyle = c.fillStyle = st.color; c.lineWidth = Math.max(st.lw*u*0.7, u*0.2); c.lineCap = 'round';
     pathPts(c, [e, near]); c.stroke();
     c.beginPath(); c.arc(e[0], e[1], Math.max(st.lw*u*1.3, u*2.5), 0, Math.PI*2); c.fill();
   }
-  a._nb = textBlock(c, a, N[0], N[1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.7, u*0.8)});
+  a._nb = textBlock(c, a, N[0], N[1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.7, u*0.2)});
   c.restore();
 }
 function drawAnnBody(c, a, page){
@@ -1091,7 +1091,7 @@ function drawAnnBody(c, a, page){
   switch (a.type){
     case 'line': case 'arrow': {
       setStroke(c, st, u);
-      const hs = Math.max(st.lw*u*3.6, u*7);
+      const hs = Math.max(st.lw*u*3.6, u*2);
       let end = P[1];
       if (a.type === 'arrow' && dist(P[0],P[1]) > hs){ const L = dist(P[0],P[1]); end = [P[1][0] - (P[1][0]-P[0][0])/L*hs*0.6, P[1][1] - (P[1][1]-P[0][1])/L*hs*0.6]; }
       pathPts(c, [P[0], end]); c.stroke();
@@ -1115,7 +1115,7 @@ function drawAnnBody(c, a, page){
       if (st.rev){
         const el = st.shape === 'ellipse', fp = 11*u*1.6, s = fp*1.9, cx = el ? x+w*0.85 : x+w, cy = el ? y+h*0.15 : y;
         c.beginPath(); c.moveTo(cx, cy - s*0.62); c.lineTo(cx + s*0.58, cy + s*0.38); c.lineTo(cx - s*0.58, cy + s*0.38); c.closePath();
-        c.fillStyle = '#fff'; c.fill(); c.lineWidth = Math.max(st.lw*u*0.8, u); c.stroke();
+        c.fillStyle = '#fff'; c.fill(); c.lineWidth = Math.max(st.lw*u*0.8, u*0.2); c.stroke();
         c.fillStyle = st.color; c.font = `bold ${fp}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillText(st.rev, cx, cy + s*0.08);
       }
@@ -1136,8 +1136,8 @@ function drawAnnBody(c, a, page){
       const b = [P[1][0]-pad, P[1][1]-pad, w, h];
       const near = [clamp(P[0][0], b[0], b[0]+b[2]), clamp(P[0][1], b[1], b[1]+b[3])];
       setStroke(c, st, u); c.setLineDash([]);
-      if (!inBox(P[0], b)){ const hs = Math.max(st.lw*u*3.6, u*7); pathPts(c, [near, P[0]]); c.stroke(); arrowHead(c, near, P[0], hs, st.color); }
-      a._b = textBlock(c, a, P[1][0], P[1][1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.8, u*0.8)});
+      if (!inBox(P[0], b)){ const hs = Math.max(st.lw*u*3.6, u*2); pathPts(c, [near, P[0]]); c.stroke(); arrowHead(c, near, P[0], hs, st.color); }
+      a._b = textBlock(c, a, P[1][0], P[1][1], fp, {bg:true, border:true, borderColor:st.color, borderW:Math.max(st.lw*u*0.8, u*0.2)});
       break; }
     case 'stamp': {
       const [x,y,w,h] = box(P);
@@ -1192,7 +1192,7 @@ function drawAnnBody(c, a, page){
       break; }
     case 'measure': case 'calibrate': {
       setStroke(c, st, u); if (a.type === 'calibrate') c.setLineDash([u*6, u*4]);
-      const hs = Math.max(st.lw*u*3.2, u*6);
+      const hs = Math.max(st.lw*u*3.2, u*2);
       pathPts(c, P); c.stroke();
       if (dist(P[0],P[1]) > hs*2){ arrowHead(c, P[1], P[0], hs, st.color); arrowHead(c, P[0], P[1], hs, st.color); }
       const L = dist(P[0],P[1]);
