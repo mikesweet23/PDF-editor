@@ -37,7 +37,7 @@ Open the web address in Safari and use **Share → Add to Home Screen** to insta
 - **Touch bar:** a floating bar appears on touch screens with **Undo / Redo**, **Finish** (for pipes, runs, areas and polygons), **Cancel**, **Free angle** (the on-screen version of holding Alt), **Square** (the on-screen version of Shift) and **Delete**.
 - **Apple Pencil:** when you first use the Pencil, **Pencil only** switches on. The Pencil draws, one finger pans and two fingers pinch to zoom. A palm resting on the screen while you draw is ignored. Turn it off in the touch bar so fingers can draw too.
 - **Gestures:** pinch to zoom and two-finger drag to pan work in the middle of drawing a pipe without losing it. Double-tap to finish a pipe or run, or to edit text.
-- **Line width:** the − and + buttons step through 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2 and so on, and the box next to them takes any exact value. The slider snaps to the same sizes.
+- **Line width, text size and symbol size:** the − and + buttons step one size at a time (line: 0.25, 0.5, 0.75, 1…; text: 1, 1.5, 2…; symbols: 10%, 15%, 20%…), and the box next to them takes any exact value. The sliders snap to the same sizes.
 - **Bigger targets:** handles, rotate grip and buttons are larger on touch screens, and taps are more forgiving.
 - **Saving:** on iPad and iPhone a **Share / Save** button opens the iOS Share sheet: Save to Files, Mail, Teams, OneDrive and so on.
 - **Large drawings:** rendering stays within iOS limits (about 16 megapixels per image), so big A1/A0 sheets and exports don't come out blank.
