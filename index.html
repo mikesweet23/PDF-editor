@@ -334,6 +334,8 @@ body.touch-ui .sym-btn{min-height:80px}
   <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
   <label class="prop" data-p="svc">Service <select id="pSvc"></select></label>
+  <label class="prop" data-p="pair">Run <select id="pPair"><option value="">Single pipe</option><option value="L">Pair – this service on left</option><option value="R">Pair – this service on right</option></select></label>
+  <label class="prop" data-p="pgap">Gap <select id="pGap"><option value="5">Tight</option><option value="8">Normal</option><option value="12">Wide</option><option value="18">Extra wide</option></select></label>
   <label class="prop" data-p="psize">Size <input type="text" id="pSize" size="7" maxlength="16" placeholder="e.g. 28mm"></label>
   <label class="prop" data-p="note">Note <input type="text" id="pNote" size="44" maxlength="400" placeholder="Note shown at the bottom of the schedule"></label>
   <label class="prop" data-p="tag">Tag <input type="text" id="pTag" size="8" maxlength="24" placeholder="e.g. V1, 25mm"></label>
@@ -371,6 +373,7 @@ body.touch-ui .sym-btn{min-height:80px}
       <div class="sym-row">Pipe runs <button class="pbtn on" data-symdir="0" title="Horizontal pipe">⟷ Horizontal</button><button class="pbtn" data-symdir="90" title="Vertical pipe">↕ Vertical</button></div>
       <label class="sym-check"><input type="checkbox" id="symAutoTag"><span>Number tags automatically (IV1, IV2, P1…)</span></label>
       <label class="sym-check"><input type="checkbox" id="symSched"><span>Add a valve &amp; component schedule to the drawing</span></label>
+      <label class="sym-check"><input type="checkbox" id="symShowIds"><span>Show tags &amp; schedule (whole document)</span></label>
       <div class="sym-row">Size <input type="range" id="symSize" min="40" max="300" step="10" value="100" aria-label="Symbol size"><span id="symSizeLbl">100%</span></div>
     </div>
     <div class="sym-scroll" id="symGrid"></div>
@@ -407,6 +410,7 @@ body.touch-ui .sym-btn{min-height:80px}
   <button class="sbtn hide-sm" id="zWidth" title="Fit width">Width</button>
   <span style="width:6px"></span>
   <button class="sbtn" id="scaleBtn" title="Set the drawing scale"><span id="scaleInfo" class="none">No scale</span></button>
+  <button class="sbtn" id="idsBtn" title="Show or hide all symbol tags (IV1, P1…) and the valve &amp; component schedule">Tags: on</button>
   <span id="hint"></span>
 </footer>
 
@@ -436,6 +440,7 @@ body.touch-ui .sym-btn{min-height:80px}
     <label class="field"><span>Marked up by (initials)</span><input type="text" id="dBy" maxlength="12"></label>
     <label class="field"><span>Revision</span><input type="text" id="dRev" maxlength="8"></label>
     <label class="check"><input type="checkbox" id="dFooter"> Add ADI markup stamp to each page</label>
+    <label class="check"><input type="checkbox" id="dShowIds"> Show symbol tags &amp; component schedule</label>
     <label class="field"><span>Measurement units</span><select id="dUnits"><option value="mm">Millimetres (mm)</option><option value="m">Metres (m)</option></select></label>
     <div class="field"><span>Scale – this page</span>
       <div class="row" style="margin:0"><span id="dScale" class="muted" style="flex:1">Not set</span><button class="btn" id="dScaleBtn">Set scale…</button></div>
@@ -541,7 +546,7 @@ const HINTS = {
   image:'Choose an image to insert. You can also paste an image with Ctrl+V.',
   signature:'Click on the drawing to place your signature. Drag a corner to resize. Pick, add or delete signatures above.',
   legend:'Click to place a colour key. Edit the meanings in Settings.',
-  pipe:'Pick the service above, click along the pipe route, double-click or Enter to finish. Snaps to 45°/90° – hold Alt for any angle. Labels repeat on long runs.',
+  pipe:'Pick the service above, click along the pipe route, double-click or Enter to finish. Snaps to 45°/90° – hold Alt for any angle. Labels repeat on long runs. Choose “Pair” to draw flow & return together; pipes that cross hop over with an arch.',
   symbols:'Pick a symbol in the panel, then click on the pipework to place it. Keep clicking to add more. [ ] rotate.',
   marker:'Drag over items to highlight them.', hlbox:'Drag a box to highlight an area.',
   whiteout:'Drag to cover part of the drawing. Then add text on top to “edit” it.',
@@ -825,7 +830,7 @@ const SYMS = [
   // Water treatment
   {id:'airsep', g:'Water treatment', n:'Air separator', s:'Air separator', k:'air separator deaerator vent', b:[-1.1,-1.85,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.0,0.4); K.txt('AS',0,-0.1,0.4); K.arr(0,-1.1,0,-1.8,0.25); }},
   {id:'airdirt', g:'Water treatment', n:'Air & dirt separator (combined)', s:'Air & dirt sep.', k:'air dirt separator combined', b:[-1.1,-1.85,1.1,1.55], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-1.1,1.1,2.2,0.4); K.txt('ADS',0,0,0.32); K.arr(0,-1.1,0,-1.8,0.25); K.ln(0,1.1,0,1.4); K.ln(-0.25,1.4,0.25,1.4); }},
-  {id:'llh', g:'Water treatment', n:'Low loss header / hydraulic separator', s:'Low loss header', k:'llh low loss header hydraulic separator', b:[-1.2,-2.4,1.2,2.2], d:K => { K.rect(-0.45,-1.8,0.9,3.6); [-1.1,1.1].forEach(y => { K.ln(-1.2,y,-0.45,y); K.ln(0.45,y,1.2,y); }); K.txt('LLH',0,0,0.28); K.arr(0,-1.8,0,-2.35,0.22); K.ln(0,1.8,0,2.1); K.ln(-0.2,2.1,0.2,2.1); }},
+  {id:'llh', g:'Water treatment', n:'Low loss header / hydraulic separator', s:'Low loss header', k:'llh low loss header hydraulic separator', b:[-0.5,-1.85,0.5,1.85], d:K => { K.rect(-0.45,-1.8,0.9,3.6); K.txt('LLH',0,0,0.28); }},
   {id:'magfilter', g:'Water treatment', n:'Magnetic filter', s:'Magnetic filter', k:'magnetic filter magnetite', b:[-1.1,-1.0,1.1,1.0], d:K => { K.ln(-1.1,0,-0.55,0); K.ln(0.55,0,1.1,0); K.rrect(-0.55,-0.9,1.1,1.8,0.35); K.txt('MF',0,0,0.42); }},
   {id:'sidestream', g:'Water treatment', n:'Side-stream filter', s:'Side-stream filter', k:'side stream filter', b:[-1.25,-1.65,1.25,0.12], d:K => { K.ln(-1.25,0,1.25,0); K.circ(-0.9,0,0.08,K.col); K.circ(0.9,0,0.08,K.col); K.poly([[-0.9,0],[-0.9,-1.2],[-0.45,-1.2]], false, null); K.poly([[0.45,-1.2],[0.9,-1.2],[0.9,0]], false, null); K.rect(-0.45,-1.55,0.9,0.7); K.txt('SSF',0,-1.2,0.28); }},
   {id:'degasser', g:'Water treatment', n:'Vacuum degasser', s:'Vacuum degasser', k:'vacuum degasser deaeration', b:[-0.9,-2.0,0.9,0.12], d:K => { K.tee(); K.ln(0,0,0,-0.5); K.rect(-0.8,-1.9,1.6,1.4); K.txt('VD',0,-1.2,0.45); }},
@@ -1055,8 +1060,10 @@ function drawAnn(c, a, page){
   if (a.type === 'patch'){ c.save(); c.fillStyle = '#fff'; c.fillRect(...a.src); c.restore(); }
   c.save(); applyRot(c, a); drawAnnBody(c, a, page); c.restore();
   if (a.type === 'cloud' && a.pts[2] && (a.text || a._editing)) drawCloudNote(c, a, page);
-  if (a.type === 'sym' && (a.tag || a.style.size)) drawSymTag(c, a, page);
+  if (a.type === 'sym' && (a.tag || a.style.size) && !idsHidden()) drawSymTag(c, a, page);
 }
+/* Tags and the valve & component schedule can be hidden for the whole document. */
+const idsHidden = () => !!(S.doc && S.doc.hideIds);
 function drawCloudNote(c, a, page){
   const u = unitOf(page), st = a.style, fp = (st.fs || 11)*u*1.6, N = a.pts[2];
   c.save(); c.globalAlpha = 1;
@@ -1145,7 +1152,7 @@ function drawAnnBody(c, a, page){
       const f2 = Math.min(h*0.14, (w*0.84)/sw); c.font = `600 ${f2}px ${FONT}`; c.fillText(sub, x+w/2, y+h*0.75);
       a._b = [x,y,w,h];
       break; }
-    case 'schedule': drawSchedule(c, a, page); break;
+    case 'schedule': if (idsHidden()) a._b = null; else drawSchedule(c, a, page); break;
     case 'sym': {
       const def = SYM_BY_ID[a.sym]; if (!def) break;
       const {k, o} = symScaleOrigin(a);
@@ -1193,7 +1200,8 @@ function drawAnnBody(c, a, page){
       label(c, txt, (P[0][0]+P[1][0])/2, (P[0][1]+P[1][1])/2, st.fs*u*1.6, st.color);
       break; }
     case 'pipe': {
-      setStroke(c, st, u); pathPts(c, P); c.stroke();
+      const X = pipeCrossings(a, P, page, hopR(a, u));
+      setStroke(c, st, u); pipePath(c, a, P, page, u, X); c.stroke();
       const sv = SERVICE_BY_ID[st.svc], txt = [sv && sv.lbl, st.size].filter(Boolean).join(' ');
       if (txt && P.length > 1){
         const fp = (st.fs || 8)*u*1.6; c.font = `bold ${fp}px ${FONT}`; const tw = c.measureText(txt).width;
@@ -1202,9 +1210,10 @@ function drawAnnBody(c, a, page){
           const a0 = P[i-1], b0 = P[i], L = dist(a0, b0); if (L > bl){ bl = L; best = i; }
           if (L < tw*2.2) continue;
           const nLab = Math.max(1, Math.floor(L/(tw*12)));
-          for (let k = 1; k <= nLab; k++) pipeLabel(c, a0, b0, k/(nLab + 1), txt, fp, tw, st.color);
+          const half = tw/2 + fp*0.4;
+          for (let k = 1; k <= nLab; k++) pipeLabel(c, a0, b0, pipeLabelPos(L*k/(nLab + 1), half, L, X[i], hopR(a, u), tw, a.lblShift)/L, txt, fp, tw, st.color);
         }
-        if (bl < tw*2.2 && best > 0) pipeLabel(c, P[best-1], P[best], 0.5, txt, fp, tw, st.color);
+        if (bl < tw*2.2 && best > 0) pipeLabel(c, P[best-1], P[best], pipeLabelPos(bl*0.5, tw/2 + fp*0.4, bl, X[best], hopR(a, u), tw, a.lblShift)/bl, txt, fp, tw, st.color);
       }
       break; }
     case 'run': {
@@ -1220,6 +1229,98 @@ function drawAnnBody(c, a, page){
       break; }
   }
   c.restore();
+}
+/* ---------- Paired pipes and crossover arches ----------
+   A pair is drawn along one centre line and saved as two ordinary pipes
+   offset either side of it (flow + return), so each keeps its own service,
+   label and length. Corners are mitred, so the pair turns together. */
+const PIPE_PARTNER = {lthwf:'lthwr', lthwr:'lthwf', chwf:'chwr', chwr:'chwf', hws:'hwsr', hwsr:'hws'};
+function offsetPolyline(pts, off){
+  const P = pts.filter((p, i) => i === 0 || dist(p, pts[i-1]) > 1e-6);
+  if (P.length < 2) return pts.map(p => p.slice());
+  const nrm = (a, b) => { const L = dist(a, b); return [(b[1]-a[1])/L, -(b[0]-a[0])/L]; };   // left of travel on screen
+  return P.map((p, i) => {
+    const n1 = i > 0 ? nrm(P[i-1], p) : null, n2 = i < P.length - 1 ? nrm(p, P[i+1]) : null;
+    if (!n1 || !n2){ const n = n1 || n2; return [p[0] + n[0]*off, p[1] + n[1]*off]; }
+    const d = 1 + n1[0]*n2[0] + n1[1]*n2[1];
+    if (d < 0.15) return [p[0] + n1[0]*off, p[1] + n1[1]*off];
+    return [p[0] + (n1[0]+n2[0])*off/d, p[1] + (n1[1]+n2[1])*off/d];
+  });
+}
+function pipePair(d, page){
+  const u = unitOf(page), half = (d.style.gap || 8)*u/2, side = d.style.pair === 'R' ? -1 : 1, pairId = d.pairId || uid();
+  const sv1 = SERVICE_BY_ID[d.style.svc] || SERVICES[0], sv2 = SERVICE_BY_ID[PIPE_PARTNER[sv1.id]] || sv1;
+  const mk = (sv, off, id, shift) => {
+    const st = {...d.style, svc:sv.id, color: sv === sv1 ? d.style.color : sv.c, dash: sv === sv1 ? d.style.dash : sv.dash};
+    st.pair = undefined; st.gap = undefined;
+    const a = {id, type:'pipe', pts:offsetPolyline(d.pts, off), style:JSON.parse(JSON.stringify(st)), pairId}; if (shift) a.lblShift = true; return a;
+  };
+  return [mk(sv1, half*side, d.id, false), mk(sv2, -half*side, uid(), true)];
+}
+function segX(p1, p2, q1, q2){
+  const rx = p2[0]-p1[0], ry = p2[1]-p1[1], sx = q2[0]-q1[0], sy = q2[1]-q1[1], den = rx*sy - ry*sx;
+  if (Math.abs(den) < 1e-9) return null;
+  const qx = q1[0]-p1[0], qy = q1[1]-p1[1], t = (qx*sy - qy*sx)/den, v = (qx*ry - qy*rx)/den;
+  return (t > 0 && t < 1 && v >= 0 && v <= 1) ? t : null;
+}
+/* Where pipe a crosses a pipe drawn before it, it hops over with an arch.
+   Crossings that sit close together (e.g. over a flow & return pair) share one arch. */
+const hopR = (a, u) => Math.max((a.style.lw || 3)*u*2, u*5);
+/* Crossings of pipe a with every other pipe on the page, per segment:
+   {s: distance along the segment, over: true when a was drawn later and hops over}. */
+function pipeCrossings(a, P, page, r){
+  const idx = page.anns.indexOf(a), ends = [P[0], P[P.length-1]], out = P.map(() => []);
+  const others = page.anns.filter(x => x.type === 'pipe' && x !== a && !(a.pairId && x.pairId === a.pairId) && x.pts.length > 1);
+  for (let i = 1; i < P.length; i++){
+    const A = P[i-1], B = P[i], L = dist(A, B); if (L < 1e-9) continue;
+    for (const x of others){
+      const xe = [x.pts[0], x.pts[x.pts.length-1]], over = idx < 0 || page.anns.indexOf(x) < idx;
+      for (let j = 1; j < x.pts.length; j++){
+        const t = segX(A, B, x.pts[j-1], x.pts[j]); if (t == null) continue;
+        const pt = [A[0] + (B[0]-A[0])*t, A[1] + (B[1]-A[1])*t];
+        if (ends.concat(xe).some(e => dist(e, pt) < r*0.9)) continue;   // a pipe ending on another is a connection, not a crossing
+        out[i].push({s:t*L, over});
+      }
+    }
+    out[i].sort((m, n) => m.s - n.s);
+  }
+  return out;
+}
+/* Where pipe a crosses a pipe drawn before it, it hops over with an arch.
+   Crossings close together (e.g. over a flow & return pair) share one arch. */
+function pipePath(c, a, P, page, u, X){
+  const r = hopR(a, u), join = Math.max(r*1.2, u*20);
+  c.beginPath(); c.moveTo(P[0][0], P[0][1]);
+  for (let i = 1; i < P.length; i++){
+    const A = P[i-1], B = P[i], L = dist(A, B);
+    if (L < 1e-9) continue;
+    const spans = [];
+    for (const {s: h} of X[i].filter(q => q.over)){ const last = spans[spans.length-1]; if (last && h - (last[1] - r) < join) last[1] = h + r; else spans.push([h - r, h + r]); }
+    const dx = (B[0]-A[0])/L, dy = (B[1]-A[1])/L, ang = Math.atan2(dy, dx);
+    const ccw = !(dx > 0.01 || (Math.abs(dx) <= 0.01 && dy < 0));   // arches bulge up (or left on vertical runs)
+    for (const [s0, s1] of spans){
+      if (s0 < r*0.3 || s1 > L - r*0.3) continue;
+      const m = (s0 + s1)/2;
+      c.lineTo(A[0] + dx*s0, A[1] + dy*s0);
+      c.ellipse(A[0] + dx*m, A[1] + dy*m, (s1 - s0)/2, r*1.15, ang, Math.PI, ccw ? 0 : 2*Math.PI, ccw);
+    }
+    c.lineTo(B[0], B[1]);
+  }
+}
+/* Place a pipe label (centre distance along a segment) clear of crossings.
+   The second pipe of a pair puts its label just after its partner's. */
+function pipeLabelPos(want, half, L, xs, r, tw, shifted){
+  const blocked = xs.map(q => [q.s - r*1.6, q.s + r*1.6]);
+  const p0 = clearSpot(want, half, L, blocked);
+  if (!shifted) return p0;
+  return clearSpot(p0 + tw*1.35, half, L, blocked.concat([[p0 - half - tw*0.1, p0 + half + tw*0.1]]));
+}
+function clearSpot(pos, half, L, blocked){
+  pos = clamp(pos, Math.min(half, L/2), Math.max(L - half, L/2));
+  const hit = p => blocked.find(([b0, b1]) => p + half > b0 && p - half < b1);
+  for (let k = 0, p = pos; k < 8; k++){ const b = hit(p); if (!b) return p; p = b[1] + half; if (p > L - half) break; }
+  for (let k = 0, p = pos; k < 8; k++){ const b = hit(p); if (!b) return p; p = b[0] - half; if (p < half) break; }
+  return pos;
 }
 function pipeLabel(c, a0, b0, t, txt, fp, tw, col){
   let ang = Math.atan2(b0[1]-a0[1], b0[0]-a0[0]); if (ang > Math.PI/2) ang -= Math.PI; if (ang < -Math.PI/2) ang += Math.PI;
@@ -1264,6 +1365,7 @@ function ellipseHit(p, b, tol, filled){
   return Math.abs(k-1)*Math.min(rx, ry) <= tol;
 }
 function hitAnn(a, p, tol){
+  if (a.type === 'schedule' && idsHidden()) return false;
   const u = unitOf(cur()), lw = ((a.style && a.style.lw) || 2) * u / 2;
   if (a.type === 'cloud' && a.pts[2] && a.text && a._nb && inBox(p, a._nb, tol)) return true;
   p = toLocal(a, p);
@@ -1342,7 +1444,7 @@ function draw(){
   if (page.bg && page.bgRot === page.rot){ ctx.imageSmoothingQuality = 'high'; ctx.drawImage(page.bg, 0, 0, W, H); }
   for (const a of page.anns) drawAnn(ctx, a, page);
   drawFooter(ctx, page);
-  if (S.drawing) drawAnn(ctx, S.drawing, page);
+  if (S.drawing){ if (S.drawing.type === 'pipe' && S.drawing.style.pair) pipePair(S.drawing, page).forEach(x => drawAnn(ctx, x, page)); else drawAnn(ctx, S.drawing, page); }
   if (S.tool === 'symbols' && S.hover && !S.drag && SYM_BY_ID[S.sym]){ const g = makeSym(S.sym, S.hover, S.symRot); g.style.opacity = 0.5; drawAnn(ctx, g, page); }
   // selection
   const sel = getSel();
@@ -1592,7 +1694,7 @@ async function loadDoc(src, saved){
       S.imgs.forEach(im => doc.pages.push(newPage(im.naturalWidth || im.width, im.naturalHeight || im.height)));
     }
     if (saved){
-      Object.assign(doc, {name:saved.name ?? doc.name, date:saved.date || doc.date, initials:saved.initials ?? doc.initials, rev:saved.rev ?? '', footer:saved.footer ?? doc.footer, units:saved.units || doc.units, assets:saved.assets || {}, blank:saved.blank || null});
+      Object.assign(doc, {name:saved.name ?? doc.name, date:saved.date || doc.date, initials:saved.initials ?? doc.initials, rev:saved.rev ?? '', footer:saved.footer ?? doc.footer, hideIds:!!saved.hideIds, units:saved.units || doc.units, assets:saved.assets || {}, blank:saved.blank || null});
       (saved.pages || []).forEach((sp, i) => { const p = doc.pages[i]; if (!p) return; p.rot = sp.rot || 0; p.mm = sp.mm || null; p.scaleLabel = sp.scaleLabel || ''; p.schedOff = !!sp.schedOff; p.anns = sp.anns || []; });
     }
     S.doc = doc; S.cur = 0; S.sel = null; S.undo = []; S.redo = []; S.dirty = !!saved && !!saved._autosave;
@@ -1614,7 +1716,7 @@ function buildProject(binary){
   const assets = {}; used.forEach(id => { if (d.assets[id]) assets[id] = d.assets[id]; });
   return {
     app:'ADI Markup', format:1, savedAt:new Date().toISOString(),
-    name:d.name, date:d.date, initials:d.initials, rev:d.rev, footer:d.footer, units:d.units, blank:d.blank || null, blankSizes:d.blankSizes || [],
+    name:d.name, date:d.date, initials:d.initials, rev:d.rev, footer:d.footer, hideIds:!!d.hideIds, units:d.units, blank:d.blank || null, blankSizes:d.blankSizes || [],
     source:{type:d.type, mime:d.mime, data: binary ? d.bytes : bytesToB64(d.bytes)},
     pages: JSON.parse(JSON.stringify(d.pages.map(p => ({rot:p.rot, mm:p.mm, scaleLabel:p.scaleLabel, schedOff:p.schedOff, anns:p.anns})), strip)),
     assets,
@@ -2030,7 +2132,9 @@ function finishClickShape(){
   const need = (d.type === 'run' || d.type === 'pipe') ? 2 : 3;
   if (d.pts.length < need){ render(); return; }
   delete d._tool; delete d._live;
-  checkpoint(); cur().anns.push(d);
+  checkpoint();
+  if (d.type === 'pipe' && d.style.pair) cur().anns.push(...pipePair(d, cur()));
+  else { if (d.type === 'pipe') d.style = {...d.style, pair:undefined}; cur().anns.push(d); }
   if (d.type === 'pipe' && ensureSchedule(cur())) toast('Added a schedule to the top-right of this page. It lists pipework by service and size – drag it anywhere.', 6000, 'ok');
   markDirty(); render();
 }
@@ -2180,6 +2284,7 @@ function updateProps(){
   if (show.has('sig')) renderSigList();
   if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
   if (sel && sel.type === 'schedule' && document.activeElement !== $('#pNote')) $('#pNote').value = sel.note ?? DEFAULT_SCHED_NOTE;
+  if (!sel && t && t.type === 'pipe'){ show.add('pair'); if (S.styles.pipe.pair) show.add('pgap'); $('#pPair').value = S.styles.pipe.pair || ''; $('#pGap').value = String(S.styles.pipe.gap || 8); }
   if (sel && sel.type === 'sym'){ show.add('tag'); if (document.activeElement !== $('#pTag')) $('#pTag').value = sel.tag || ''; }
   $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
   syncAngle();
@@ -2372,12 +2477,24 @@ function updateAll(){
   const si = $('#scaleInfo'); si.textContent = page ? (page.mm ? 'Scale: ' + scaleText(page) : 'No scale – set') : 'No scale'; si.classList.toggle('none', !page || !page.mm);
   if (d){
     $('#dName').value = d.name; $('#dDate').value = d.date; $('#dBy').value = d.initials || ''; $('#dRev').value = d.rev || '';
-    $('#dFooter').checked = !!d.footer; $('#dUnits').value = d.units; $('#dScale').textContent = scaleText(page);
+    $('#dFooter').checked = !!d.footer; $('#dShowIds').checked = !d.hideIds; $('#dUnits').value = d.units; $('#dScale').textContent = scaleText(page);
     $('#dExample').textContent = `${baseName()}.pdf`;
   }
+  syncIdsUI();
   $$('.thumb').forEach(b => b.classList.toggle('on', +b.dataset.i === S.cur));
   const on = $(`.thumb[data-i="${S.cur}"]`); if (on) on.scrollIntoView({block:'nearest'});
   updateProps(); updateHint(); renderMarkupList(); updateUndoBtns(); render();
+}
+function syncIdsUI(){
+  const on = !(S.doc && S.doc.hideIds);
+  $('#idsBtn').textContent = 'Tags: ' + (on ? 'on' : 'off'); $('#idsBtn').disabled = !S.doc;
+  $('#symShowIds').checked = on; $('#dShowIds').checked = on;
+}
+function setIdsShown(on){
+  if (!S.doc) return;
+  S.doc.hideIds = !on; if (!on && getSel() && getSel().type === 'schedule'){ S.sel = null; updateProps(); }
+  setDirty(true); scheduleAutosave(); syncIdsUI(); render();
+  toast(on ? 'Symbol tags and the component schedule are shown.' : 'Symbol tags and the component schedule are hidden on every page (and in exports). Turn them back on with “Tags” at the bottom.', 4000, 'ok');
 }
 function updateHint(){ $('#hint').textContent = S.doc ? (HINTS[S.tool] || '') : ''; }
 
@@ -2835,6 +2952,8 @@ function init(){
   $$('[data-symdir]').forEach(b => b.onclick = () => { S.symRot = (+b.dataset.symdir)*Math.PI/180; syncSymDir(); });
   $('#symSize').addEventListener('input', e => { S.symSize = +e.target.value/100; $('#symSizeLbl').textContent = e.target.value + '%'; });
   $('#pSvc').innerHTML = SERVICES.map(x => `<option value="${x.id}">${esc(x.n)}</option>`).join('');
+  $('#pPair').addEventListener('change', e => { S.styles.pipe.pair = e.target.value; updateProps(); updateHint(); render(); });
+  $('#pGap').addEventListener('change', e => { S.styles.pipe.gap = +e.target.value; render(); });
   bindProp('#pSvc', 'svc', v => v); bindProp('#pSize', 'size', v => v.trim());
   $('#pNote').addEventListener('input', e => applyProp('note', e.target.value, false));
   $('#pNote').addEventListener('change', e => applyProp('note', e.target.value, true));
@@ -2879,6 +2998,9 @@ function init(){
   $('#docName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; setDirty(true); scheduleAutosave(); $('#dName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
   $('#dName').addEventListener('input', e => { if (!S.doc) return; S.doc.name = e.target.value; setDirty(true); scheduleAutosave(); $('#docName').value = e.target.value; $('#dExample').textContent = `${baseName()}.pdf`; render(); });
   docField('#dDate', 'date'); docField('#dBy', 'initials'); docField('#dRev', 'rev');
+  $('#dShowIds').addEventListener('change', e => setIdsShown(e.target.checked));
+  $('#symShowIds').addEventListener('change', e => setIdsShown(e.target.checked));
+  $('#idsBtn').onclick = () => setIdsShown(!!(S.doc && S.doc.hideIds));
   $('#dFooter').addEventListener('change', e => { if (!S.doc) return; S.doc.footer = e.target.checked; setDirty(true); scheduleAutosave(); render(); });
   $('#dUnits').addEventListener('change', e => { if (!S.doc) return; S.doc.units = e.target.value; setDirty(true); scheduleAutosave(); updateAll(); });
   $('#dToday').onclick = () => { if (!S.doc) return; S.doc.date = todayISO(); setDirty(true); scheduleAutosave(); updateAll(); };
