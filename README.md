@@ -55,7 +55,8 @@ Open the web address in Safari and use **Share → Add to Home Screen** to insta
 | Cloud markup | A "bubbly" cloud drawn as a box or an ellipse/circle, with its own outline and fill colour and an attached note. Use it to flag an area for change, an instruction or documentation. Optional rev tag. Double-click a cloud to add or edit its note. |
 | Colours and rotation | Every shape has an outline colour, plus a fill colour with strength (none, light, medium, solid). Rotate any selected markup by dragging the round handle above it (Shift snaps to 15°), with the ⟲/⟳ buttons, by typing an angle, or with `[` and `]`. |
 | Colour code | Swatches with meanings (red = remove, green = new, etc.), which you can edit in Settings. The **Colour key** tool places a legend on the drawing. |
-| Text | Text boxes and callouts (arrow plus note). To "edit" existing text, use **White-out** to cover the old text, then type over it. |
+| Text | Text boxes and callouts (arrow plus note). **Edit text in the drawing (D):** click any word or line of text in a PDF to change it. The old text is whited out and an editable text box appears in its place, at the same size, colour and angle. Clear the box to delete the text. (Scanned drawings have no real text: use White-out and Text instead.) |
+| Eraser | **Eraser (Z):** drag over lines and marks in the drawing to rub them out. Set its size with the Line slider. Each stroke is a markup, so it can be selected, moved or deleted. |
 | Highlight | Highlighter pen and highlight box. |
 | Stamps | APPROVED, APPROVED AS NOTED, REVISED, FOR COMMENT, NOT FOR CONSTRUCTION and more. Each stamp includes ADI Climate Systems, your initials and the date. |
 | Move part of a drawing | **Move part of drawing** tool: box an area, then drag it to its new position. The original spot is whited out. |
@@ -84,7 +85,8 @@ Open the web address in Safari and use **Share → Add to Home Screen** to insta
 | F | Freehand | | W | White-out |
 | C | Cloud markup | | X | Move part of drawing |
 | M | Measure | | N | Run |
-| U | Area | | | |
+| U | Area | | D | Edit text in the drawing |
+| | | | Z | Eraser |
 
 | Shortcut | Action |
 |---|---|
