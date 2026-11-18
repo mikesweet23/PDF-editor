@@ -2482,6 +2482,11 @@ function buildSwatches(){
   $('#swatches').innerHTML = settings.legend.map(l => `<button class="sw" data-c="${esc(l.c)}" title="${esc(l.label || l.c)}" style="background:${esc(l.c)}"></button>`).join('');
 }
 function currentStyleTarget(){
+  if (multiOn()){   // several selected: show the first markup's values; changes go to every markup that has that setting
+    const list = selAnns(), style = {};
+    list.forEach(a => Object.entries(a.style || {}).forEach(([k, v]) => { if (style[k] == null) style[k] = v; }));
+    return {type:'multi', style, list};
+  }
   const sel = getSel();
   if (sel) return {type: sel.type, style: sel.style, ann: sel};
   const type = toolType(S.tool);
@@ -2490,14 +2495,14 @@ function currentStyleTarget(){
 function updateProps(){
   const t = currentStyleTarget(), sel = getSel();
   $('#propTitle').textContent = multiOn() ? selAnns().length + ' markups selected' : sel ? typeName(sel) : (TYPE_NAME[S.tool] || '');
-  const show = new Set(t ? PROPS[t.type] || [] : []);
+  const show = new Set(t ? (t.list ? multiProps(t.list) : PROPS[t.type] || []) : []);
   if (sel || multiOn()) show.add('selActions');
   if (S.clip && S.doc) show.add('paste');
   if (show.has('sig')) renderSigList();
   if (sel && !NO_ROTATE.has(sel.type)) show.add('rot');
   if (sel && sel.type === 'schedule' && document.activeElement !== $('#pNote')) $('#pNote').value = sel.note ?? DEFAULT_SCHED_NOTE;
   if (!sel && t && t.type === 'pipe'){ show.add('pair'); if (S.styles.pipe.pair) show.add('pgap'); $('#pPair').value = S.styles.pipe.pair || ''; $('#pGap').value = String(S.styles.pipe.gap || 8); }
-  if (sel && sel.type === 'sym'){ show.add('symscale'); if (symSelCtl) symSelCtl.show(symPct(sel)); }
+  { const sy = firstSelSym(); if (sy){ show.add('symscale'); if (symSelCtl) symSelCtl.show(symPct(sy)); } }
   if (sel && sel.type === 'sym'){ show.add('tag'); if (document.activeElement !== $('#pTag')) $('#pTag').value = sel.tag || ''; }
   $('#pAngleWrap').hidden = !(sel && ROT_TYPES.has(sel.type));
   syncAngle();
@@ -2522,8 +2527,38 @@ function updateProps(){
   $('#pRev').value = st.rev || '';
 }
 let propCheckpointed = false;
+// settings that apply to at least one of the selected markups (one-off settings like signatures are left out)
+function multiProps(list){ const out = new Set(); list.forEach(a => (PROPS[a.type] || []).forEach(p => { if (p !== 'sig' && p !== 'note') out.add(p); })); return [...out]; }
+const firstSelSym = () => selAnns().find(a => a.type === 'sym') || null;
+function applyPropMulti(t, key, val, final){
+  if (!propCheckpointed){ checkpoint(); propCheckpointed = true; }
+  if (final) propCheckpointed = false;
+  const prop = key === 'fillColor' ? 'fill' : key;
+  for (const a of t.list){
+    if (key === 'symscale'){ if (a.type === 'sym') setSymPct(a, val); continue; }
+    if (!(PROPS[a.type] || []).includes(prop)) continue;
+    const st = a.style || (a.style = {});
+    if (key === 'svc'){ const sv = SERVICE_BY_ID[val] || SERVICES[0]; st.svc = sv.id; st.color = sv.c; st.dash = sv.dash; continue; }
+    if (key === 'stamp'){ a.stamp = val; st.color = STAMPS[val] || st.color; continue; }
+    st[key] = val;
+    if (key === 'fill' && val === 'solid' && st.fillColor == null) st.fillColor = st.color;
+    if (key === 'fillColor' && (!st.fill || st.fill === 'none' || st.fill === 'white')) st.fill = 'tint';
+  }
+  markDirty(); updateProps();
+}
+// − / + with several markups selected: each one goes up or down one step from its own size
+function stepSelection(key, dir, steps){
+  if (!multiOn()) return false;
+  const next = v => { const i = dir > 0 ? steps.findIndex(x => x > v + 1e-9) : steps.map(x => x < v - 1e-9).lastIndexOf(true); return i >= 0 ? steps[i] : v; };
+  const list = selAnns().filter(a => key === 'symscale' ? a.type === 'sym' : (PROPS[a.type] || []).includes(key) && a.style && a.style[key] != null);
+  if (!list.length) return true;
+  checkpoint(); propCheckpointed = false;
+  list.forEach(a => { if (key === 'symscale') setSymPct(a, next(symPct(a))); else a.style[key] = next(a.style[key]); });
+  markDirty(); updateProps(); return true;
+}
 function applyProp(key, val, final){
   const t = currentStyleTarget(); if (!t) return;
+  if (t.list){ applyPropMulti(t, key, val, final); return; }
   const sel = getSel();
   if (sel && !propCheckpointed){ checkpoint(); propCheckpointed = true; }
   if (final) propCheckpointed = false;
@@ -2563,7 +2598,7 @@ function setSelAngle(deg){ const a = getSel(); if (!a || !ROT_TYPES.has(a.type) 
 const LW_STEPS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24];
 const FS_STEPS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60];
 const SYM_STEPS = [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300];
-function steppedControl({id, steps, min, max, get, set}){
+function steppedControl({id, steps, min, max, get, set, stepMany}){
   const sl = $('#' + id), num = $('#' + id + 'Num');
   const nearest = v => { let bi = 0; steps.forEach((x, i) => { if (Math.abs(x - v) < Math.abs(steps[bi] - v)) bi = i; }); return bi; };
   const show = v => { sl.value = nearest(v); if (document.activeElement !== num) num.value = String(Math.round(v*100)/100); };
@@ -2573,6 +2608,7 @@ function steppedControl({id, steps, min, max, get, set}){
   sl.addEventListener('change', () => put(steps[+sl.value], true));
   const cur = () => get() || +num.value || steps[0];
   const step = dir => {
+    if (stepMany && stepMany(dir, steps)) return;
     const v = cur(), i = dir > 0 ? steps.findIndex(x => x > v + 1e-9) : steps.map(x => x < v - 1e-9).lastIndexOf(true);
     if (i >= 0) put(steps[i], true);
   };
@@ -2594,9 +2630,9 @@ function setSymPct(a, pct){
 function showLw(v){ if (lwCtl) lwCtl.show(v); }
 function showFs(v){ if (fsCtl) fsCtl.show(v); }
 function bindSizeControls(){
-  lwCtl = steppedControl({id:'pLw', steps:LW_STEPS, min:0.1, max:50, get:() => styleNow('lw'), set:(v, f) => applyProp('lw', v, f)});
-  fsCtl = steppedControl({id:'pFs', steps:FS_STEPS, min:0.5, max:120, get:() => styleNow('fs'), set:(v, f) => applyProp('fs', v, f)});
-  symSelCtl = steppedControl({id:'pSym', steps:SYM_STEPS, min:5, max:500, get:() => { const a = getSel(); return a && a.type === 'sym' ? symPct(a) : 0; }, set:(v, f) => applyProp('symscale', v, f)});
+  lwCtl = steppedControl({id:'pLw', steps:LW_STEPS, min:0.1, max:50, get:() => styleNow('lw'), set:(v, f) => applyProp('lw', v, f), stepMany:(d, st) => stepSelection('lw', d, st)});
+  fsCtl = steppedControl({id:'pFs', steps:FS_STEPS, min:0.5, max:120, get:() => styleNow('fs'), set:(v, f) => applyProp('fs', v, f), stepMany:(d, st) => stepSelection('fs', d, st)});
+  symSelCtl = steppedControl({id:'pSym', steps:SYM_STEPS, min:5, max:500, get:() => { const a = firstSelSym(); return a ? symPct(a) : 0; }, set:(v, f) => applyProp('symscale', v, f), stepMany:(d, st) => stepSelection('symscale', d, st)});
   const symCtl = steppedControl({id:'symSize', steps:SYM_STEPS, min:5, max:500, get:() => Math.round((S.symSize || 1)*100), set:v => { S.symSize = v/100; render(); }});
   symCtl.show(Math.round((S.symSize || 1)*100));
 }
