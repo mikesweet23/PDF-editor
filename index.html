@@ -81,6 +81,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke
 #propTitle{font-weight:600;color:var(--heading);min-width:110px}
 .prop{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .prop input[type=range]{width:80px}
+.rv{min-width:2.6em;font-variant-numeric:tabular-nums;color:var(--text);font-size:12px}
 .prop select,.prop input[type=text]{border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--field);color:var(--text)}
 .swatches{display:flex;gap:4px}
 .sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px #b8c0cc;padding:0}
@@ -325,13 +326,13 @@ body.touch-ui .sym-btn{min-height:80px}
 <div id="props">
   <span id="propTitle">Select</span>
   <div class="prop" data-p="color">Outline <div class="swatches" id="swatches"></div><input type="color" id="pColor" title="Custom colour"></div>
-  <label class="prop" data-p="lw">Line <input type="range" id="pLw" min="0.25" max="24" step="0.25"></label>
+  <label class="prop" data-p="lw">Line <input type="range" id="pLw" min="0.25" max="24" step="0.25"><output class="rv" for="pLw"></output></label>
   <label class="prop" data-p="dash">Style <select id="pDash"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
   <div class="prop" data-p="fill">Fill <input type="color" id="pFillColor" title="Fill colour"><select id="pFill" title="Fill strength"><option value="none">No fill</option><option value="tint">Light</option><option value="half">Medium</option><option value="solid">Solid</option></select></div>
   <label class="prop" data-p="shape">Shape <select id="pShape"><option value="box">Box</option><option value="ellipse">Ellipse / circle</option></select></label>
   <label class="prop" data-p="tfill">Background <select id="pTFill"><option value="none">None</option><option value="white">White</option><option value="box">White + border</option></select></label>
-  <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="1" max="60" step="0.5"></label>
-  <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"></label>
+  <label class="prop" data-p="fs">Text size <input type="range" id="pFs" min="1" max="60" step="0.5"><output class="rv" for="pFs"></output></label>
+  <label class="prop" data-p="opacity">Opacity <input type="range" id="pOpacity" min="10" max="100" step="5"><output class="rv" for="pOpacity" data-suf="%"></output></label>
   <label class="prop" data-p="stamp">Stamp <select id="pStamp"></select></label>
   <label class="prop" data-p="svc">Service <select id="pSvc"></select></label>
   <label class="prop" data-p="pair">Run <select id="pPair"><option value="">Single pipe</option><option value="L">Pair – this service on left</option><option value="R">Pair – this service on right</option></select></label>
@@ -2304,6 +2305,7 @@ function updateProps(){
   if (st.tfill) $('#pTFill').value = st.tfill;
   if (st.fs != null) $('#pFs').value = st.fs;
   $('#pOpacity').value = Math.round((st.opacity ?? 1)*100);
+  syncRangeLabels();
   if (t.type === 'stamp') $('#pStamp').value = sel ? sel.stamp : (st.stamp || 'APPROVED');
   $('#pRev').value = st.rev || '';
 }
@@ -2343,8 +2345,12 @@ function rotateSelBy(deg){
   markDirty(); updateProps();
 }
 function setSelAngle(deg){ const a = getSel(); if (!a || !ROT_TYPES.has(a.type) || isNaN(deg)) return; checkpoint(); a.rot = normAng(deg*Math.PI/180); markDirty(); }
+function syncRangeLabels(){
+  $$('#props output.rv').forEach(o => { const el = document.getElementById(o.getAttribute('for')); if (el) o.textContent = el.value + (o.dataset.suf || ''); });
+}
 function bindProp(id, key, conv){
   const el = $(id);
+  if (el.type === 'range') el.addEventListener('input', syncRangeLabels);
   el.addEventListener('input', () => applyProp(key, conv(el.value), false));
   el.addEventListener('change', () => applyProp(key, conv(el.value), true));
 }
@@ -2928,6 +2934,7 @@ function init(){
   $('#swatches').addEventListener('click', e => { const b = e.target.closest('.sw'); if (b) applyProp('color', b.dataset.c, true); });
   bindProp('#pColor', 'color', v => v);
   bindProp('#pLw', 'lw', v => +v); bindProp('#pFs', 'fs', v => +v); bindProp('#pOpacity', 'opacity', v => +v/100);
+  syncRangeLabels();
   bindProp('#pDash', 'dash', v => v); bindProp('#pFill', 'fill', v => v); bindProp('#pTFill', 'tfill', v => v);
   bindProp('#pStamp', 'stamp', v => v); bindProp('#pRev', 'rev', v => v.trim());
   bindProp('#pFillColor', 'fillColor', v => v); bindProp('#pShape', 'shape', v => v);
