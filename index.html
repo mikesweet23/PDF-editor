@@ -62,7 +62,7 @@ button{cursor:pointer}
 .hbtn:disabled{opacity:.4;cursor:default}
 .hbtn svg{width:17px;height:17px}
 .menu-wrap{position:relative}
-.menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.18);min-width:260px;padding:6px;z-index:50}
+.menu{position:fixed;right:12px;top:58px;max-height:calc(100vh - 70px);overflow-y:auto;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.18);min-width:260px;padding:6px;z-index:150}
 .menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:6px}
 .menu button:hover{background:var(--accent-soft)}
 .menu small{display:block;color:var(--muted);font-size:12px}
@@ -3268,7 +3268,18 @@ function init(){
   $('#fileImage').onchange = e => { insertImageFile(e.target.files[0]); e.target.value = ''; };
   $('#btnSave').onclick = openSaveDialog;
   $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
-  $('#btnExport').onclick = e => { e.stopPropagation(); $('#exportMenu').hidden = !$('#exportMenu').hidden; };
+  $('#btnExport').onclick = e => {
+    e.stopPropagation();
+    const m = $('#exportMenu');
+    if (m.hidden){
+      /* The header clips overflow, so the menu is position:fixed and placed under the button here */
+      const r = $('#btnExport').getBoundingClientRect();
+      m.style.top = (r.bottom + 6) + 'px';
+      m.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+    }
+    m.hidden = !m.hidden;
+  };
+  window.addEventListener('resize', () => { $('#exportMenu').hidden = true; });
   $$('[data-exp]').forEach(b => b.onclick = () => exportAs(b.dataset.exp));
   document.addEventListener('click', e => { if (!e.target.closest('.menu-wrap')) $('#exportMenu').hidden = true; });
   $('#btnSettings').onclick = openSettings;
